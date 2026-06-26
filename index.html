@@ -1108,11 +1108,13 @@ function renderGantt(monthsOverride, forPrint) {
   });
   sel.value = prev;
 
-  // 工期が終わった工事（延長があれば延長終了日基準）は非表示
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // 終了日（延長があれば延長終了日）が「当月1日」より前の工事だけ非表示。
+  // → 終了日が当月内なら月末まで表示。月が変わると（表示月も移動して）自動的に消える。
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const isFinished = r => {
     const eff = (r.ext && r.ext > r.end) ? r.ext : r.end;
-    return eff && eff < todayStr;
+    if (!eff) return false;
+    return new Date(eff) < monthStart;   // 先月以前に終わった工事だけ消す
   };
   const active = kojiData.filter(r => !isFinished(r));
   const rows   = fp ? active.filter(r => r.person === fp) : active;
