@@ -23,7 +23,7 @@
   --blue:         #2055a0;
   --blue-lt:      #e8eef8;
   --blue-dk:      #133070;
-  --today:        rgba(210,50,50,.40);
+  --today:        rgba(210,50,50,.45);
   --r:            7px;
   --r-lg:         11px;
   --header-h:     50px;
@@ -129,13 +129,6 @@ body {
 }
 .mode-pill.admin  { background: var(--text); color: #fff; }
 .mode-pill.viewer { background: var(--blue); color: #fff; }
-.url-banner {
-  background: #fff8e4; border: 1px solid #f0d070;
-  border-radius: var(--r); padding: 9px 14px;
-  font-size: 12px; color: #7a5500;
-  display: none; align-items: center; gap: 6px;
-  margin-bottom: 12px;
-}
 .page { display: none; padding: 16px 20px; }
 .page.active { display: block; }
 .btn {
@@ -194,10 +187,9 @@ body {
   align-items: center; margin-bottom: 10px;
 }
 .leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-sub); }
-.leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.leg-line { width: 22px; height: 0; border-top: 2px solid var(--border-hard); }
+.leg-bar { width: 20px; height: 8px; border-radius: 4px; flex-shrink: 0; }
+.leg-bar-sm { width: 10px; height: 8px; border-radius: 4px; flex-shrink: 0; }
 .leg-dashed { width: 22px; height: 0; border-top: 2px dashed var(--border-hard); }
-.leg-today { width: 3px; height: 14px; background: var(--today); border-radius: 2px; }
 .gantt-wrap {
   overflow-x: auto;
   max-height: calc(100vh - var(--header-h) - 130px);
@@ -215,18 +207,14 @@ table.gantt thead th {
   text-align: center;
   border-bottom: 1px solid var(--border);
   color: var(--text-sub);
+  position: sticky; top: 0; z-index: 20;
 }
 table.gantt thead th.col-name {
   text-align: left; min-width: 80px;
-  position: sticky; left: 0; z-index: 10;
+  position: sticky; left: 0; z-index: 25;
   background: var(--surface2);
 }
 table.gantt thead th.col-job { text-align: left; min-width: 140px; }
-table.gantt thead th {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
 table.gantt tbody tr:hover td { background: #fafaf6; }
 table.gantt tbody td {
   padding: 0; height: 52px;
@@ -234,13 +222,13 @@ table.gantt tbody td {
 }
 table.gantt tbody td.col-name {
   padding: 5px 10px;
-  font-weight: 700; font-size: 12px; text-align: center;
+  font-weight: 700; font-size: 13px; text-align: center;
   border-right: 2px solid var(--border-hard);
-  position: sticky; left: 0; background: var(--surface); z-index: 5;
+  position: sticky; left: 0; background: var(--surface); z-index: 6;
 }
 table.gantt tbody td.col-job {
   padding: 3px 10px;
-  font-size: 11px; color: var(--text-sub);
+  font-size: 11px; color: var(--text);
   vertical-align: middle;
   max-width: 150px; overflow: hidden; text-overflow: ellipsis;
   border-right: 1px solid var(--border);
@@ -266,160 +254,139 @@ td.month-cell {
   min-width: 82px;
   border-left: 1px solid var(--border);
 }
-.bar-wrap { position: relative; height: 58px; }
-.bar-solid {
-  position: absolute;
-  height: 10px; top: 42%; transform: translateY(-50%);
-  border-radius: 5px;
-}
-.bar-prog {
-  position: absolute;
-  height: 10px; top: 42%; transform: translateY(-50%);
-  border-radius: 5px;
-  opacity: .22;
-}
-.bar-frame {
-  position: absolute;
-  height: 10px; top: 42%; transform: translateY(-50%);
-  border-radius: 5px;
-  background: transparent;
-}
-.bar-frame.editable { cursor: pointer; }
-.bar-frame.editable:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
-.bar-dashed-svg {
-  position: absolute;
-  top: 42%; transform: translateY(-50%);
-  height: 10px; overflow: visible;
-}
-.bar-label {
-  position: absolute;
-  font-size: 10px; font-weight: 700;
-  white-space: nowrap; pointer-events: none;
-  top: 18%;
-}
-.bar-prog-label {
-  position: absolute;
-  font-size: 10px; font-weight: 700;
-  white-space: nowrap; pointer-events: none;
-  top: 64%;
-}
-.bar-date-label {
-  position: absolute;
-  font-size: 10px; font-weight: 600;
-  white-space: nowrap; pointer-events: none;
-  top: 70%;                          /* バーの下に配置 */
-  transform: translateY(-50%);
-  padding-left: 4px;
-  opacity: .85;
-}
-.bar-comment {
-  position: absolute;
-  top: 4px;
-  font-size: 13px; color: #111; font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap; pointer-events: none;
-  padding-left: 14px;
-  max-width: 600px; overflow: visible; text-overflow: clip;
-}
-/* 月別出来高ラベル（バーの下に配置・バー右端の左）。毎月分。クリックで入力モーダル */
-.month-prog {
-  position: absolute;
-  top: 70%;                                /* バーの下に配置 */
-  transform: translate(-100%, -50%);
-  font-size: 10px; font-weight: 700;
-  padding: 0 3px;
-  background: rgba(255,255,255,.92);
-  color: #1c1c1a;
-  white-space: nowrap;
-  cursor: pointer;
-  pointer-events: auto;
-  z-index: 4;
-  line-height: 1.1;
-  border-radius: 2px;
-}
-.month-prog.empty {
-  color: #999; font-weight: 500;
-  background: transparent;
-  opacity: 0;                              /* 未入力月の「＋」は普段は非表示 */
-  transition: opacity .15s;
-  padding: 2px 5px;                        /* ヒット範囲をやや広げる */
-  font-size: 11px;
-}
-/* 工事の行（バー入り行）にホバーで未入力＋を薄く表示 */
-tr:hover .month-prog.empty { opacity: .55; }
-.month-prog.empty:hover { opacity: 1 !important; }
-.month-prog:hover {
-  background: #fff7c2;
-  box-shadow: 0 0 0 1px #888;
-  z-index: 5;
-}
-.today-line {
-  position: absolute; top: 0; bottom: 0;
-  width: 2px; background: var(--today);
-  pointer-events: none; z-index: 3; border-radius: 1px;
-}
-.prog-intro { font-size: 12px; color: var(--text-sub); margin-bottom: 12px; }
-.prog-item {
-  display: flex; align-items: center; gap: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  margin-bottom: 8px;
-  cursor: pointer;
+/* コメントを描くセルだけ前面へ。月をまたいだ文字が隣セルに隠れないようにする */
+td.month-cell.has-comment { z-index: 5; }
+.bar-wrap { position: relative; height: 52px; }
+
+/* 工期＝薄い帯 / 進捗＝濃い塗り */
+.bar-track {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 18px; overflow: hidden;
+  cursor: pointer; z-index: 2;
   transition: box-shadow .12s;
 }
-.prog-item:hover { box-shadow: 0 2px 10px rgba(0,0,0,.07); }
-.prog-item-info { flex: 1; min-width: 0; }
-.prog-item-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
-.prog-item-sub  { font-size: 11px; color: var(--text-sub); }
-.prog-item-memo { font-size: 11px; color: #9a6000; margin-top: 3px; }
-.prog-item-right { min-width: 110px; text-align: right; }
-.prog-pct { font-size: 20px; font-weight: 700; }
-.prog-bar-bg {
-  background: var(--surface2); border-radius: 4px;
-  height: 5px; width: 100px;
-  margin-top: 5px; overflow: hidden; margin-left: auto;
+.bar-track:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.18); }
+.bar-fill { height: 100%; }
+.bar-pct {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 18px; display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 6px; font-size: 10px; font-weight: 700;
+  pointer-events: none; z-index: 3;
 }
-.prog-bar-fill { height: 100%; border-radius: 4px; }
-.po-section {
-  font-size: 11px; font-weight: 700; color: var(--text-sub);
-  letter-spacing: .06em;
-  padding: 6px 2px 6px; margin-top: 8px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 8px;
+.bar-dashed {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 18px; border: 1.5px dashed;
+  cursor: pointer; z-index: 2; background: transparent;
 }
-.po-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 13px 15px; margin-bottom: 9px;
+.bar-dashed:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
+/* 延長区間に届いた進捗の塗り（本体より薄く） */
+.bar-ext-fill {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 18px; opacity: .40;
+  pointer-events: none; z-index: 1;
 }
-.po-card-header {
-  display: flex; align-items: flex-start;
-  justify-content: space-between; gap: 12px; margin-bottom: 9px;
+.bar-end-date {
+  position: absolute; top: 76%;
+  font-size: 10px; font-weight: 600;
+  white-space: nowrap; pointer-events: none;
+  padding-left: 3px;
 }
-.po-card-title { font-size: 13px; font-weight: 700; line-height: 1.4; }
-.po-card-meta  { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; align-items: center; }
-.po-badge {
-  display: inline-block; font-size: 10px; font-weight: 600;
-  padding: 2px 7px; border-radius: 10px;
+.bar-comment {
+  position: absolute; top: 1px;
+  font-size: 11px; color: #111; font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap; pointer-events: none;
+  z-index: 6;
 }
-.po-card-pct { font-size: 22px; font-weight: 700; white-space: nowrap; }
-.po-bar-track {
-  width: 100%; height: 5px; background: var(--surface2);
-  border-radius: 3px; overflow: hidden; margin-bottom: 8px;
+
+/* ===== バー押下で開く入力パネル ===== */
+.pop-backdrop { position: fixed; inset: 0; z-index: 200; display: none; }
+.pop-backdrop.open { display: block; }
+.popover {
+  position: absolute; z-index: 210; width: 268px; max-width: 94vw;
+  background: var(--surface); border: 1px solid var(--border-hard);
+  border-radius: var(--r-lg); box-shadow: 0 8px 30px rgba(0,0,0,.20);
+  padding: 15px; display: none;
 }
-.po-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
-.po-card-memo {
-  font-size: 11px; color: #7a5000;
-  background: #fff8e4; border: 1px solid #f0d070;
-  border-radius: 6px; padding: 6px 10px;
-  line-height: 1.5; white-space: pre-wrap; margin-top: 6px;
+.popover.open { display: block; }
+.pop-arrow {
+  position: absolute; top: -7px; left: 26px; width: 12px; height: 12px;
+  background: var(--surface); border-left: 1px solid var(--border-hard);
+  border-top: 1px solid var(--border-hard); transform: rotate(45deg);
 }
-.po-card-dates { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
-.master-row {
-  display: flex; gap: 8px;
-  margin-bottom: 14px; align-items: center;
+.pop-head { margin-bottom: 11px; }
+.pop-title { font-size: 13px; font-weight: 700; line-height: 1.35; }
+.pop-sub { font-size: 10px; color: var(--text-sub); margin-top: 3px; }
+.pop-tabs {
+  display: flex; gap: 2px; margin-bottom: 13px;
+  background: var(--surface2); border-radius: 8px; padding: 3px;
 }
+.pop-tab {
+  flex: 1; padding: 7px 4px; border: none; background: transparent;
+  font-size: 12px; font-family: inherit; color: var(--text-sub);
+  border-radius: 6px; cursor: pointer; font-weight: 500;
+  transition: background .12s, color .12s;
+}
+.pop-tab:hover { color: var(--text); }
+.pop-tab.active {
+  background: var(--surface); color: var(--text); font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,.10);
+}
+/* 管理者はタブ順を入れ替え、工事編集を先頭に */
+body.is-admin #tab-term { order: -1; }
+.pop-panel { display: none; }
+.pop-panel.active { display: block; }
+.step-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.step-btn {
+  width: 38px; height: 38px; border-radius: 9px;
+  border: 1px solid var(--border-hard); background: var(--surface2);
+  font-size: 19px; color: var(--text); cursor: pointer; line-height: 1;
+  font-family: inherit;
+}
+.step-btn:hover { background: #e3e1db; }
+.step-mid { flex: 1; }
+.step-val { text-align: center; font-size: 22px; font-weight: 700; line-height: 1; }
+.step-range { width: 100%; margin-top: 8px; accent-color: var(--blue); }
+.pop-label {
+  font-size: 10px; font-weight: 700; color: var(--text-sub);
+  letter-spacing: .05em; margin-bottom: 5px;
+}
+.pop-comment {
+  width: 100%; border: 1px solid var(--border-hard); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; font-family: inherit; line-height: 1.5;
+  min-height: 56px; resize: vertical; outline: none;
+  background: var(--surface2); color: var(--text);
+}
+.pop-comment:focus { border-color: var(--blue); }
+.f-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 9px; }
+.f-row label {
+  font-size: 10px; font-weight: 700; color: var(--text-sub); letter-spacing: .05em;
+}
+.f-row input, .f-row select {
+  padding: 7px 9px; border: 1px solid var(--border-hard); border-radius: 7px;
+  font-size: 12px; font-family: inherit; background: var(--surface); color: var(--text);
+  outline: none;
+}
+.f-row input:focus, .f-row select:focus { border-color: var(--blue); }
+/* 管理者だけに見せる項目 */
+.admin-only-field { display: none; }
+body.is-admin .admin-only-field { display: flex; }
+.pop-footer { display: flex; gap: 8px; margin-top: 13px; }
+.pop-footer button {
+  padding: 9px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  font-family: inherit; border: 1px solid var(--border-hard);
+}
+.btn-close { flex: 1; background: var(--surface2); color: var(--text-sub); }
+.btn-save  { flex: 2; background: var(--blue); color: #fff; border-color: transparent; font-weight: 700; }
+.btn-save:hover { background: var(--blue-dk); }
+.btn-del {
+  padding: 9px 12px; background: transparent; color: var(--red);
+  border-color: var(--red); display: none;
+}
+body.is-admin .btn-del { display: block; }
+.btn-del:hover { background: var(--red-lt); }
+
+.master-row { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
 .master-row input {
   padding: 6px 12px;
   border: 1px solid var(--border-hard);
@@ -465,18 +432,6 @@ tr:hover .month-prog.empty { opacity: .55; }
   align-items: center; gap: 8px; margin-top: 16px;
 }
 .modal-footer-right { display: flex; gap: 8px; }
-.prog-big {
-  font-size: 28px; font-weight: 700;
-  text-align: center; color: var(--blue); margin: 4px 0 8px;
-}
-input[type="range"].prog-range {
-  width: 100%; margin: 4px 0;
-  accent-color: var(--blue);
-}
-.range-labels {
-  display: flex; justify-content: space-between;
-  font-size: 11px; color: var(--text-hint);
-}
 .settings-section {
   max-width: 520px;
   padding-bottom: 20px; margin-bottom: 20px;
@@ -484,10 +439,6 @@ input[type="range"].prog-range {
 }
 .settings-section:last-child { border-bottom: none; }
 .settings-section h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
-.settings-section ol {
-  font-size: 12px; color: var(--text-sub);
-  line-height: 2.1; padding-left: 18px;
-}
 .empty {
   text-align: center; padding: 36px 20px;
   font-size: 13px; color: var(--text-sub);
@@ -500,23 +451,23 @@ input[type="range"].prog-range {
 .print-title { font-size: 17px; font-weight: 800; letter-spacing: .05em; }
 .print-date  { font-size: 11px; color: var(--text-sub); }
 
-/* 印刷フィット計測用（印刷ボタン押下時にJSが付与）。
-   印刷時の高さを決めるプロパティを画面にも反映させ、正確に実測して1ページに収める */
+/* 印刷フィット計測用（印刷ボタン押下時にJSが付与） */
 .print-mode .bar-wrap { height: 56px; }
 .print-mode table.gantt thead th { font-size: 13px; padding: 5px 4px; }
 .print-mode table.gantt td.col-name { font-size: 14px; white-space: nowrap; }
 .print-mode table.gantt td.col-job {
   width: 150px; max-width: 150px; white-space: normal; line-height: 1.25; font-size: 14px;
 }
-.print-legend { display: none; }   /* 印刷専用の凡例。画面では非表示 */
+.print-legend { display: none; }
 
 @media print {
   @page { size: A4 portrait; margin: 8mm; }
   html, body { background: #fff !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-  .app-header, .toolbar, .legend, .url-banner,
+  .app-header, .toolbar, .legend,
   #toast, #loading, #pw-screen, .modal-bg,
+  .pop-backdrop, .popover,
   .add-koji-btn { display: none !important; }
 
   .page { display: none !important; padding: 0 !important; }
@@ -533,7 +484,6 @@ input[type="range"].prog-range {
   table.gantt { min-width: 0 !important; width: 100% !important; border: 1.5px solid #777 !important; }
   table.gantt thead { display: table-header-group; }
   table.gantt tr { page-break-inside: avoid; }
-  /* 同じ担当者の工事間は線なし、担当者の切れ目だけ太線 */
   table.gantt tbody td { border-bottom: none !important; }
   table.gantt tbody td.sep { border-bottom: 2px solid #555 !important; }
   table.gantt thead th,
@@ -541,58 +491,36 @@ input[type="range"].prog-range {
   table.gantt tbody td.col-name { position: static !important; }
   td.month-cell { min-width: 0 !important; width: auto !important; }
 
-  /* 行の高さ（最終的な1ページ収めはJSの zoom で調整） */
   .bar-wrap { height: 56px !important; }
-  /* バー本体（読みやすさ重視で 10px） */
-  .bar-solid, .bar-prog, .bar-frame {
-    height: 10px !important;
+  .bar-track, .bar-dashed, .bar-ext-fill, .bar-pct {
+    height: 12px !important;
     top: 50% !important; transform: translateY(-50%) !important;
   }
-  .bar-dashed-svg {
-    top: 50% !important; transform: translateY(-50%) !important;
-    height: 10px !important;
-  }
-  /* 終了日はバーの下に配置（バー右端の右） */
-  .bar-date-label {
+  .bar-end-date {
     top: 80% !important; bottom: auto !important;
     transform: translateY(-50%) !important;
     padding-left: 4px !important;
-    color: #111 !important; font-size: 13px !important; font-weight: 700 !important;
+    color: #111 !important; font-size: 12px !important; font-weight: 700 !important;
     opacity: 1 !important;
   }
-  /* 印刷時のコメントはバーの上に出す。余白を確保 */
+  .bar-pct { font-size: 11px !important; }
   .bar-comment {
-    top: 9px !important; font-size: 13px !important;
+    top: 7px !important; font-size: 12px !important;
     color: #111 !important; font-weight: 700 !important;
-    line-height: 1.4 !important;
-    padding-left: 6px !important;
-    max-width: 500px !important;
+    line-height: 1.3 !important;
     overflow: visible !important; text-overflow: clip !important;
   }
-  /* 印刷時の月別出来高ラベル：値がある月のみ表示（未入力の「＋」は出さない） */
-  .month-prog {
-    top: 80% !important;
-    transform: translate(-100%, -50%) !important;
-    font-size: 13px !important; padding: 0 3px !important;
-    font-weight: 700 !important;
-  }
-  .month-prog.empty { display: none !important; }
-
-  /* 担当者は内容ぶんまで詰め、工事名は折り返し。余った幅は月の列へ回す */
-  /* 担当者＝濃い＋太字 */
   table.gantt th.col-name, table.gantt td.col-name {
     min-width: 0 !important; width: 1% !important; white-space: nowrap !important;
     font-size: 14px !important; color: var(--text) !important; font-weight: 700 !important;
     padding-left: 5px !important; padding-right: 5px !important;
   }
-  /* 工事名＝濃い（読める色）＋細字で担当者と区別 */
   table.gantt th.col-job, table.gantt td.col-job {
     width: 150px !important; min-width: 0 !important; max-width: 150px !important;
     white-space: normal !important; line-height: 1.25 !important; font-size: 14px !important;
     color: var(--text) !important; font-weight: 400 !important;
     padding-left: 5px !important; padding-right: 5px !important;
   }
-  /* 月見出し＝濃い＋太字 */
   table.gantt thead th {
     font-size: 13px !important; padding: 5px 4px !important;
     color: var(--text) !important; font-weight: 700 !important;
@@ -623,12 +551,11 @@ input[type="range"].prog-range {
 <header class="app-header">
   <div class="app-title">人員配置表</div>
   <nav class="tabs" id="tabs">
-    <button class="tab active"       data-tab="gantt"         onclick="switchTab('gantt')">ガントチャート</button>
-    <button class="tab"              data-tab="progress"      onclick="switchTab('progress')">進捗入力</button>
-    <button class="tab"              data-tab="progress-only" onclick="switchTab('progress-only')">進捗一覧</button>
-    <button class="tab admin-only"   data-tab="master"        onclick="requireAdmin('master')">担当者マスタ</button>
-    <button class="tab admin-only"   data-tab="koji-master"   onclick="requireAdmin('koji-master')">工事マスタ</button>
-    <button class="tab admin-only"   data-tab="settings"      onclick="requireAdmin('settings')">設定</button>
+    <button class="tab active"     data-tab="gantt"       onclick="switchTab('gantt')">ガントチャート</button>
+    <button class="tab"            data-tab="progress"    onclick="switchTab('progress')">進捗一覧</button>
+    <button class="tab admin-only" data-tab="master"      onclick="requireAdmin('master')">担当者マスタ</button>
+    <button class="tab admin-only" data-tab="koji-master" onclick="requireAdmin('koji-master')">工事マスタ</button>
+    <button class="tab admin-only" data-tab="settings"    onclick="requireAdmin('settings')">設定</button>
   </nav>
   <div class="header-right">
     <span class="mode-pill viewer" id="mode-pill">監督モード</span>
@@ -637,9 +564,6 @@ input[type="range"].prog-range {
 </header>
 
 <div id="page-gantt" class="page active">
-  <div class="url-banner" id="url-banner">
-    ⚠️ GAS URLが未設定です。「設定」タブでURLを入力してください（管理者）
-  </div>
   <div class="toolbar">
     <label>表示期間</label>
     <select id="sel-range" onchange="renderGantt()">
@@ -656,12 +580,14 @@ input[type="range"].prog-range {
     <button class="btn" onclick="loadData()" title="最新データを取得">↻ 更新</button>
   </div>
   <div class="legend">
-    <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>元請</div>
-    <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>民間</div>
-    <div class="leg"><div class="leg-dot" style="background:var(--blue)"></div>予定</div>
-    <div class="leg"><div class="leg-line"></div>常駐（実線）</div>
-    <div class="leg"><div class="leg-dashed"></div>スポット / 予定 / 延長（破線）</div>
-    <div class="leg"><div class="leg-today"></div>今月</div>
+    <div class="leg"><div class="leg-bar" style="background:#c93535"></div>元請</div>
+    <div class="leg"><div class="leg-bar" style="background:#1c8050"></div>民間</div>
+    <div class="leg"><div class="leg-bar" style="background:#2055a0"></div>予定</div>
+    <div class="leg">
+      <div class="leg-bar" style="background:#f7e3e3"></div>薄=工期 /
+      <div class="leg-bar-sm" style="background:#c93535"></div>濃=進捗
+    </div>
+    <div class="leg"><div class="leg-dashed"></div>スポット / 予定 / 延長</div>
   </div>
   <div id="print-area">
     <div id="print-scale">
@@ -670,12 +596,10 @@ input[type="range"].prog-range {
         <span class="print-date" id="print-date"></span>
       </div>
       <div class="legend print-legend">
-        <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>元請</div>
-        <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>民間</div>
-        <div class="leg"><div class="leg-dot" style="background:var(--blue)"></div>予定</div>
-        <div class="leg"><div class="leg-line"></div>常駐（実線）</div>
-        <div class="leg"><div class="leg-dashed"></div>スポット / 予定 / 延長（破線）</div>
-        <div class="leg"><div class="leg-today"></div>今月</div>
+        <div class="leg"><div class="leg-bar" style="background:#c93535"></div>元請</div>
+        <div class="leg"><div class="leg-bar" style="background:#1c8050"></div>民間</div>
+        <div class="leg"><div class="leg-bar" style="background:#2055a0"></div>予定</div>
+        <div class="leg"><div class="leg-dashed"></div>スポット / 予定 / 延長</div>
       </div>
       <div class="gantt-wrap">
         <div id="gantt-container"></div>
@@ -685,11 +609,6 @@ input[type="range"].prog-range {
 </div>
 
 <div id="page-progress" class="page">
-  <p class="prog-intro">工事を選んで進捗率・コメントを更新してください。保存するとスプレッドシートに即時反映されます。</p>
-  <div id="progress-list"></div>
-</div>
-
-<div id="page-progress-only" class="page">
   <div class="toolbar">
     <label>担当者</label>
     <select id="sel-prog-person" onchange="renderProgressOnly()">
@@ -721,20 +640,6 @@ input[type="range"].prog-range {
 
 <div id="page-settings" class="page">
   <div class="settings-section">
-    <h3>GAS接続設定</h3>
-    <div class="form-row">
-      <label>GAS Web App URL</label>
-      <input type="text" id="gas-url-input"
-        placeholder="https://script.google.com/macros/s/XXXXX/exec">
-    </div>
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn btn-primary" onclick="saveGasUrl()">URLを保存して接続テスト</button>
-      <button class="btn" onclick="clearGasUrl()">クリア</button>
-    </div>
-    <div id="conn-status" style="margin-top:10px;font-size:12px"></div>
-  </div>
-
-  <div class="settings-section">
     <h3>管理者パスワード変更</h3>
     <div class="form-row">
       <label>新しいパスワード</label>
@@ -742,36 +647,104 @@ input[type="range"].prog-range {
     </div>
     <button class="btn btn-primary" onclick="changePw()">変更</button>
     <p style="font-size:11px;color:var(--text-sub);margin-top:8px">
-      ※ パスワードはブラウザのlocalStorageに保存されます。
+      ※ ここで変えるのは、この端末で管理者タブを開くためのパスワードです（localStorageに保存）。<br>
+      ※ 書き込み権限そのものはGAS側の ADMIN_PASSWORD で管理されています。両方を揃えてください。
     </p>
   </div>
 
   <div class="settings-section">
-    <h3>GAS設定手順</h3>
-    <ol>
-      <li>Googleスプレッドシートを新規作成</li>
-      <li>「拡張機能」→「Apps Script」を開く</li>
-      <li>GASコードファイル（gas_code.js）の内容を貼り付け</li>
-      <li>スプレッドシートIDとパスワードを変更して保存</li>
-      <li>「デプロイ」→「新しいデプロイ」→「ウェブアプリ」</li>
-      <li>アクセス権:「全員」に設定してデプロイ</li>
-      <li>発行されたURLをこのページの上欄に入力</li>
-    </ol>
+    <h3>接続情報</h3>
+    <p style="font-size:12px;color:var(--text-sub);line-height:1.8">
+      GAS Web App URL はコードに直接埋め込まれています。<br>
+      変更する場合は、HTMLファイル冒頭の <code>GAS_URL</code> を書き換えてください。
+    </p>
+    <div id="conn-status" style="margin-top:10px;font-size:12px"></div>
   </div>
 </div>
 
-<div id="modal-koji" class="modal-bg" onclick="if(event.target===this)closeModal('koji')">
+<!-- 新規追加モーダル（管理者のみ・担当者行の＋から） -->
+<div id="modal-add" class="modal-bg" onclick="if(event.target===this)closeAddModal()">
   <div class="modal">
-    <h3 id="koji-modal-title">工事追加</h3>
-    <div class="form-row" id="f-person-row">
+    <h3>工事追加</h3>
+    <div class="form-row">
       <label>担当者</label>
-      <select id="f-person"><option value="">— 選択してください —</option></select>
+      <select id="a-person"><option value="">— 選択してください —</option></select>
     </div>
-    <div class="form-row" id="f-name-row">
+    <div class="form-row">
       <label>工事名</label>
-      <select id="f-name"><option value="">— 選択してください —</option></select>
+      <select id="a-name"><option value="">— 選択してください —</option></select>
     </div>
-    <div class="form-row" id="f-type-row">
+    <div class="form-row">
+      <label>工事種別</label>
+      <select id="a-type">
+        <option value="元請">元請</option>
+        <option value="民間">民間</option>
+        <option value="予定">予定</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>配置</label>
+      <select id="a-config">
+        <option value="常駐">常駐</option>
+        <option value="スポット">スポット</option>
+      </select>
+    </div>
+    <div class="form-row"><label>開始日</label><input type="date" id="a-start"></div>
+    <div class="form-row"><label>終了日</label><input type="date" id="a-end"></div>
+    <div class="form-row"><label>延長日（任意）</label><input type="date" id="a-ext"></div>
+    <div class="modal-footer">
+      <div></div>
+      <div class="modal-footer-right">
+        <button class="btn" onclick="closeAddModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveAdd()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- バー押下で開くパネル -->
+<div class="pop-backdrop" id="backdrop" onclick="closePop()"></div>
+<div class="popover" id="popover" onclick="event.stopPropagation()">
+  <div class="pop-arrow"></div>
+
+  <div class="pop-head">
+    <div class="pop-title" id="pop-title"></div>
+    <div class="pop-sub" id="pop-sub"></div>
+  </div>
+
+  <div class="pop-tabs">
+    <button class="pop-tab active" id="tab-prog" onclick="switchPopTab('prog')">進捗・コメント</button>
+    <button class="pop-tab"        id="tab-term" onclick="switchPopTab('term')">工期変更</button>
+  </div>
+
+  <div class="pop-panel active" id="panel-prog">
+    <div class="step-row">
+      <button class="step-btn" onclick="stepProg(-5)">−</button>
+      <div class="step-mid">
+        <div class="step-val" id="pop-val">0%</div>
+        <input type="range" class="step-range" id="pop-range" min="0" max="100" step="5"
+          oninput="syncVal(this.value)">
+      </div>
+      <button class="step-btn" onclick="stepProg(5)">＋</button>
+    </div>
+    <div class="pop-label">コメント（現場メモ）</div>
+    <textarea class="pop-comment" id="pop-comment" placeholder="例: 橋脚完了、上部工に着手"></textarea>
+    <div class="pop-footer">
+      <button class="btn-close" onclick="closePop()">閉じる</button>
+      <button class="btn-save" onclick="saveProgPop()">保存</button>
+    </div>
+  </div>
+
+  <div class="pop-panel" id="panel-term">
+    <div class="f-row admin-only-field">
+      <label>担当者</label>
+      <select id="f-person"></select>
+    </div>
+    <div class="f-row admin-only-field">
+      <label>工事名</label>
+      <select id="f-name"></select>
+    </div>
+    <div class="f-row admin-only-field">
       <label>工事種別</label>
       <select id="f-type">
         <option value="元請">元請</option>
@@ -779,50 +752,20 @@ input[type="range"].prog-range {
         <option value="予定">予定</option>
       </select>
     </div>
-    <div class="form-row" id="f-config-row">
+    <div class="f-row admin-only-field">
       <label>配置</label>
       <select id="f-config">
         <option value="常駐">常駐</option>
         <option value="スポット">スポット</option>
       </select>
     </div>
-    <div class="form-row" id="f-start-row"><label>開始日</label><input type="date" id="f-start"></div>
-    <div class="form-row" id="f-end-row"><label>終了日</label><input type="date" id="f-end"></div>
-    <div class="form-row" id="f-ext-row"><label>延長日（任意）</label><input type="date" id="f-ext"></div>
-    <div class="modal-footer">
-      <button id="btn-koji-del" class="btn btn-danger" onclick="deleteKoji()" style="display:none">削除</button>
-      <div class="modal-footer-right">
-        <button class="btn" onclick="closeModal('koji')">キャンセル</button>
-        <button class="btn btn-primary" onclick="saveKoji()">保存</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="modal-prog" class="modal-bg" onclick="if(event.target===this)closeModal('prog')">
-  <div class="modal">
-    <h3 id="prog-modal-title"></h3>
-    <div id="prog-modal-sub" style="font-size:11px;color:var(--text-sub);margin-bottom:16px"></div>
-    <div class="form-row">
-      <label>進捗率</label>
-      <div class="prog-big" id="prog-big">0%</div>
-      <input type="range" class="prog-range" id="prog-range"
-        min="0" max="100" step="5" value="0"
-        oninput="document.getElementById('prog-big').textContent=this.value+'%'">
-      <div class="range-labels">
-        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
-      </div>
-    </div>
-    <div class="form-row">
-      <label>コメント（監督メモ）</label>
-      <textarea id="prog-comment" placeholder="例: 外壁工事完了。内装作業中。"></textarea>
-    </div>
-    <div class="modal-footer">
-      <div></div>
-      <div class="modal-footer-right">
-        <button class="btn" onclick="closeModal('prog')">キャンセル</button>
-        <button class="btn btn-primary" onclick="saveProg()">保存</button>
-      </div>
+    <div class="f-row"><label>開始日</label><input type="date" id="f-start"></div>
+    <div class="f-row"><label>終了日</label><input type="date" id="f-end"></div>
+    <div class="f-row"><label>延長日（任意）</label><input type="date" id="f-ext"></div>
+    <div class="pop-footer">
+      <button class="btn-del" onclick="delKojiPop()">削除</button>
+      <button class="btn-close" onclick="closePop()">閉じる</button>
+      <button class="btn-save" onclick="saveTermPop()">保存</button>
     </div>
   </div>
 </div>
@@ -830,30 +773,33 @@ input[type="range"].prog-range {
 <script>
 'use strict';
 
-const COLOR = { 元請: '#c93535', 民間: '#1c8050', 予定: '#2055a0' };
-const TYPE_MARK = { 元請: '元', 民間: '民', 予定: '予' };
-const TYPE_BG = { 元請: '#fbeaea', 民間: '#e8f5ee', 予定: '#e8eef8' };
-const TYPE_FG = { 元請: '#8a2020', 民間: '#10522f', 予定: '#133070' };
+/* =========================================================
+   GAS Web App URL をここに直接書き込む（全員が設定不要で使える）
+   例: 'https://script.google.com/macros/s/AKfycb.../exec'
+   ========================================================= */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuJiPicW9YWHyC9BA2FSur4BsWk6o3fqWqiDhAzBwdVr98K9VPAMiYEM8p0j5vkoI/exec';
+
+const COLOR = { 元請:'#c93535', 民間:'#1c8050', 予定:'#2055a0' };
+const LIGHT = { 元請:'#f7e3e3', 民間:'#e2f2ea', 予定:'#e3ebf7' };
+const TYPE_BG = { 元請:'#fbeaea', 民間:'#e8f5ee', 予定:'#e8eef8' };
+const TYPE_FG = { 元請:'#8a2020', 民間:'#10522f', 予定:'#133070' };
 const DEFAULT_PW = 'admin1234';
 
-let GAS_URL     = localStorage.getItem('gasUrl') || '';
-let ADMIN_PW    = localStorage.getItem('adminPw') || DEFAULT_PW;
-let isAdmin     = false;
-let pendingTab  = null;
-let editKojiId  = null;
-let editProgId  = null;
-let editProgMonth = null;   // 月別出来高入力時の対象月 ("YYYY-MM")
+let ADMIN_PW   = localStorage.getItem('adminPw') || DEFAULT_PW;
+let isAdmin    = false;
+let pendingTab = null;
+let editId     = null;   // パネルで編集中の工事ID
 
 let masters     = [];
 let kojiMasters = [];
 let kojiData    = [];
 let nextId      = 1;
 
+/* ---------- ユーティリティ ---------- */
+
 function fmtDate(s) {
   if (!s) return '';
   const str = String(s);
-  // ISO日時（時刻付き）はローカルTZ（日本）で解釈してから yyyy-MM-dd 化
-  // ↑GAS側のスクリプトTZが Asia/Tokyo でなくても1日ズレを防ぐ
   if (str.includes('T')) {
     const d = new Date(str);
     if (!isNaN(d)) {
@@ -867,68 +813,31 @@ function fmtDate(s) {
 }
 
 function normalizeKoji(list) {
-  return (list || []).map(r => {
-    // monthlyProgress: GASからは JSON文字列で来る想定。{} オブジェクトに正規化。
-    let mp = r.monthlyProgress;
-    if (typeof mp === 'string') {
-      try { mp = mp.trim() ? JSON.parse(mp) : {}; } catch (e) { mp = {}; }
-    }
-    if (!mp || typeof mp !== 'object' || Array.isArray(mp)) mp = {};
-    return {
-      ...r,
-      start: fmtDate(r.start),
-      end:   fmtDate(r.end),
-      ext:   fmtDate(r.ext),
-      monthlyProgress: mp,
-    };
-  });
+  return (list || []).map(r => ({
+    ...r,
+    start: fmtDate(r.start),
+    end:   fmtDate(r.end),
+    ext:   fmtDate(r.ext),
+    progress: Number(r.progress) || 0,
+  }));
 }
 
-// "YYYY-MM" 文字列ヘルパー
-function monthKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
-}
-function formatMonthKey(key) {
-  const [y, m] = key.split('-');
-  return `${y}年${parseInt(m, 10)}月`;
-}
-// 指定月より前の月で最新の出来高値（先月引き継ぎ用）
-function getPrevMonthProgress(row, key) {
-  if (!row || !row.monthlyProgress) return undefined;
-  const months = Object.keys(row.monthlyProgress).filter(k => k < key).sort();
-  if (!months.length) return undefined;
-  return row.monthlyProgress[months[months.length - 1]];
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('gas-url-input').value = GAS_URL;
-  updateAdminUI();
-  if (GAS_URL) {
-    loadData();
-  } else {
-    document.getElementById('url-banner').style.display = 'flex';
-  }
-
-  document.querySelector('.gantt-wrap').addEventListener('wheel', e => {
-    e.stopPropagation();
-  }, { passive: true });
-});
-
-function showLoading(v) {
-  document.getElementById('loading').style.display = v ? 'flex' : 'none';
+function ymd(d) {
+  const y  = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2,'0');
+  const da = String(d.getDate()).padStart(2,'0');
+  return `${y}-${mo}-${da}`;
 }
 
-function showToast(msg, isError = false) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast' + (isError ? ' error' : '');
-  el.classList.add('show');
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.classList.remove('show'), 3000);
-}
+/* ---------- 通信 ---------- */
 
 async function gasGet(params) {
-  if (!GAS_URL) throw new Error('GAS URLが未設定です');
   const res  = await fetch(GAS_URL + '?' + new URLSearchParams(params));
   const data = await res.json();
   if (data.error) throw new Error(data.error);
@@ -936,7 +845,6 @@ async function gasGet(params) {
 }
 
 async function gasPost(payload) {
-  if (!GAS_URL) throw new Error('GAS URLが未設定です');
   const res  = await fetch(GAS_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
@@ -948,7 +856,6 @@ async function gasPost(payload) {
 }
 
 async function loadData() {
-  if (!GAS_URL) return;
   showLoading(true);
   try {
     const d     = await gasGet({ action: 'getAll' });
@@ -956,7 +863,6 @@ async function loadData() {
     kojiMasters = d.kojiMasters || [];
     kojiData    = normalizeKoji(d.koji);
     nextId      = kojiData.length ? Math.max(...kojiData.map(r => r.id)) + 1 : 1;
-    document.getElementById('url-banner').style.display = 'none';
     renderGantt();
     showToast('データを読み込みました');
   } catch(e) {
@@ -966,9 +872,38 @@ async function loadData() {
   }
 }
 
+/* ---------- 画面共通 ---------- */
+
+function showLoading(v) {
+  document.getElementById('loading').style.display = v ? 'flex' : 'none';
+}
+
+function showToast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = isError ? 'error' : '';
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  updateAdminUI();
+  if (GAS_URL.startsWith('http')) {
+    loadData();
+  } else {
+    showToast('GAS URLがコードに設定されていません', true);
+  }
+  document.querySelector('.gantt-wrap')
+    .addEventListener('wheel', e => e.stopPropagation(), { passive: true });
+});
+
+/* ---------- 権限 ---------- */
+
 function updateAdminUI() {
-  const pill   = document.getElementById('mode-pill');
+  const pill    = document.getElementById('mode-pill');
   const modeBtn = document.getElementById('mode-btn');
+  document.body.classList.toggle('is-admin', isAdmin);
   document.querySelectorAll('.tab.admin-only').forEach(t => {
     t.classList.toggle('unlocked', isAdmin);
   });
@@ -981,13 +916,13 @@ function updateAdminUI() {
     pill.className   = 'mode-pill viewer';
     modeBtn.textContent = '管理者ログイン';
   }
-  // 担当者ごとの「＋」ボタンの表示/非表示も切り替えるためガントを再描画
   renderGantt();
 }
 
 function toggleAdmin() {
   if (isAdmin) {
     isAdmin = false;
+    closePop();
     updateAdminUI();
     switchTab('gantt');
     showToast('ログアウトしました');
@@ -1000,12 +935,6 @@ function toggleAdmin() {
 function requireAdmin(tab) {
   if (isAdmin) { switchTab(tab); return; }
   pendingTab = tab;
-  showPwScreen();
-}
-
-function requireAdminAction(fn) {
-  if (isAdmin) { fn(); return; }
-  pendingTab = null;
   showPwScreen();
 }
 
@@ -1022,7 +951,6 @@ function checkPw() {
     document.getElementById('pw-screen').style.display = 'none';
     isAdmin = true;
     updateAdminUI();
-    renderGantt();
     if (pendingTab) { switchTab(pendingTab); pendingTab = null; }
     showToast('管理者としてログインしました');
   } else {
@@ -1037,7 +965,7 @@ function cancelPw() {
   pendingTab = null;
 }
 
-const TAB_ORDER = ['gantt','progress','progress-only','master','koji-master','settings'];
+const TAB_ORDER = ['gantt','progress','master','koji-master','settings'];
 
 function switchTab(t) {
   document.querySelectorAll('.tab').forEach((el, i) =>
@@ -1045,18 +973,12 @@ function switchTab(t) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + t).classList.add('active');
 
-  if (t === 'progress')      renderProgress();
-  if (t === 'progress-only') renderProgressOnly();
-  if (t === 'master')        renderPersonChips();
-  if (t === 'koji-master')   renderKojiChips();
-  if (t === 'settings')      document.getElementById('gas-url-input').value = GAS_URL;
+  if (t === 'progress')    renderProgressOnly();
+  if (t === 'master')      renderPersonChips();
+  if (t === 'koji-master') renderKojiChips();
 }
 
-function closeModal(id) {
-  document.getElementById('modal-' + id).classList.remove('open');
-  editKojiId = editProgId = null;
-  editProgMonth = null;
-}
+/* ---------- 月・日付の計算 ---------- */
 
 function getMonths(n) {
   const now  = new Date();
@@ -1065,20 +987,19 @@ function getMonths(n) {
     new Date(base.getFullYear(), base.getMonth() + i, 1));
 }
 
-// 印刷用の月配列。今日の月始まりから、次の3月まで（年度末まで）。
+// 印刷用の月配列。今月から年度末（次の3月）まで。
 function getFiscalMonths() {
   const now = new Date();
   const y   = now.getMonth() >= 3 ? now.getFullYear() + 1 : now.getFullYear();
-  const last = new Date(y, 2, 1);  // 翌年（または当年）の3月
+  const last = new Date(y, 2, 1);
   const months = [];
-  for (let d = new Date(now.getFullYear(), now.getMonth(), 1);
-       d <= last;
-       d.setMonth(d.getMonth() + 1)) {
+  for (let d = new Date(now.getFullYear(), now.getMonth(), 1); d <= last; d.setMonth(d.getMonth() + 1)) {
     months.push(new Date(d));
   }
   return months;
 }
 
+// 日付がその月のどの位置か（0〜1にクランプ）
 function dayFrac(dateStr, m) {
   const d  = new Date(dateStr);
   const m0 = new Date(m.getFullYear(), m.getMonth(), 1);
@@ -1091,6 +1012,8 @@ function dayFrac(dateStr, m) {
 function useDashedBar(row) {
   return row.config === 'スポット' || row.type === '予定';
 }
+
+/* ---------- ガント描画 ---------- */
 
 function renderGantt(monthsOverride, forPrint) {
   const n      = parseInt(document.getElementById('sel-range').value);
@@ -1108,18 +1031,18 @@ function renderGantt(monthsOverride, forPrint) {
   });
   sel.value = prev;
 
-  // 終了日（延長があれば延長終了日）が「当月1日」より前の工事だけ非表示。
-  // → 終了日が当月内なら月末まで表示。月が変わると（表示月も移動して）自動的に消える。
+  // 終了日（延長があれば延長日）が「当月1日」より前の工事だけ非表示。
+  // → 終了日が当月内なら月末まで表示。月が変わると自動的に消える。
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const isFinished = r => {
     const eff = (r.ext && r.ext > r.end) ? r.ext : r.end;
     if (!eff) return false;
-    return new Date(eff) < monthStart;   // 先月以前に終わった工事だけ消す
+    return new Date(eff) < monthStart;
   };
   const active = kojiData.filter(r => !isFinished(r));
   const rows   = fp ? active.filter(r => r.person === fp) : active;
+
   const groups = {};
-  // 担当者ごとに「＋」ボタンを置くため、フィルタなし時は工事0件の担当者も表示する
   if (fp) {
     if (masters.includes(fp)) groups[fp] = [];
   } else {
@@ -1141,24 +1064,21 @@ function renderGantt(monthsOverride, forPrint) {
 
   const persons = Object.keys(groups);
   if (!persons.length) {
-    const msg = GAS_URL ? 'データがありません' : 'GAS URLを設定してください（設定タブ）';
-    html += `<tr><td colspan="${2 + months.length}"><div class="empty">${msg}</div></td></tr>`;
+    html += `<tr><td colspan="${2 + months.length}"><div class="empty">データがありません</div></td></tr>`;
   }
 
   persons.forEach((person, pi) => {
-    const entries = groups[person];
+    const entries     = groups[person];
     const isLastGroup = pi === persons.length - 1;
-    const nameSep = !isLastGroup ? 'sep' : '';
-    // 担当者ごとの「＋工事追加」ボタン（管理者のみ、印刷時は出さない）
-    const safePerson = String(person).replace(/'/g, "\\'");
+    const nameSep     = !isLastGroup ? 'sep' : '';
+    const safePerson  = String(person).replace(/'/g, "\\'");
     const addBtn = (isAdmin && !forPrint)
-      ? `<button class="add-koji-btn" onclick="event.stopPropagation();openKojiModal(null,{person:'${safePerson}'})" title="この担当者で工事を追加">＋</button>`
+      ? `<button class="add-koji-btn" onclick="event.stopPropagation();openAddModal('${safePerson}')" title="この担当者で工事を追加">＋</button>`
       : '';
 
-    // 工事ゼロの担当者：空の1行を出す（管理者なら＋ボタンが押せる）
     if (entries.length === 0) {
       html += '<tr>';
-      html += `<td class="col-name ${nameSep}">${person.toUpperCase()}${addBtn}</td>`;
+      html += `<td class="col-name ${nameSep}">${escapeHtml(person)}${addBtn}</td>`;
       html += `<td class="col-job ${nameSep}"></td>`;
       months.forEach(() => { html += `<td class="month-cell ${nameSep}"></td>`; });
       html += '</tr>';
@@ -1166,127 +1086,114 @@ function renderGantt(monthsOverride, forPrint) {
     }
 
     entries.forEach((row, ri) => {
-      const isLastRow  = ri === entries.length - 1;
-      const sepClass   = isLastRow && !isLastGroup ? 'sep' : '';
-      const color      = COLOR[row.type] || '#888';
-      const dashed     = useDashedBar(row);
-      const rs         = new Date(row.start);
-      const re         = new Date(row.end);
-      const rex        = row.ext ? new Date(row.ext) : null;
-      const barEnd     = rex && rex > re ? rex : re;
+      const isLastRow = ri === entries.length - 1;
+      const sep       = isLastRow && !isLastGroup ? 'sep' : '';
+      const color     = COLOR[row.type] || '#888';
+      const light     = LIGHT[row.type] || '#eee';
+      const dashed    = useDashedBar(row);
+
+      const rs     = new Date(row.start);
+      const re     = new Date(row.end);
+      const rex    = row.ext ? new Date(row.ext) : null;
+      const hasExt = rex && rex > re;
+      // 延長があれば、それが実効的な終了日（進捗100% = 延長終了日）
+      const effEnd    = hasExt ? rex : re;
+      const effEndStr = hasExt ? row.ext : row.end;
+      // 進捗の先端日付：開始〜実効終了 に対する progress% の位置。
+      // これを基準に各月セルを塗るので、月ごとに進捗が繰り返されない。
+      const tip    = new Date(rs.getTime() + (effEnd - rs) * (row.progress / 100));
+      const tipStr = ymd(tip);
 
       html += '<tr>';
-
       if (ri === 0) {
-        // col-name は rowspan で複数行をまたぐので、グループ終端と一致するよう
-        // !isLastGroup なら sep を付ける（最終行判定とは別ロジック）
-        html += `<td class="col-name ${nameSep}" rowspan="${entries.length}">${person.toUpperCase()}${addBtn}</td>`;
+        html += `<td class="col-name ${nameSep}" rowspan="${entries.length}">${escapeHtml(person)}${addBtn}</td>`;
       }
 
-      const hasMemo = !!row.comment;
-      html += `<td class="col-job ${sepClass}" onclick="editKoji(${row.id})" title="${row.name}${hasMemo ? ' — ' + row.comment : ''}（クリックで工期編集）">`;
-      html += row.name;
-      if (hasMemo) html += ` <span style="color:#9a6000;font-size:10px">●</span>`;
-      html += '</td>';
+      // 工事名セル：種別カラーの左ボーダー。クリックで工期変更タブを開く。
+      const memoMark = row.comment ? ' <span style="color:#9a6000;font-size:10px">●</span>' : '';
+      html += `<td class="col-job ${sep}" style="border-left:3px solid ${color}"
+        onclick="openPopTerm(event,${row.id})"
+        title="${escapeHtml(row.name)}（クリックで工期変更）">${escapeHtml(row.name)}${memoMark}</td>`;
 
-      // バー上のコメントは「画面に最初に出るセル」で1回だけ描画
-      let commentRendered = false;
+      let commentDone = false;
 
-      months.forEach((m, mi) => {
+      months.forEach(m => {
         const mNext    = new Date(m.getFullYear(), m.getMonth() + 1, 1);
-        const overlaps = rs < mNext && barEnd >= m;
+        const overlaps = rs < mNext && effEnd >= m;
 
-        html += `<td class="month-cell ${sepClass}">`;
+        const willComment = overlaps && row.comment && !commentDone;
+        const cls = ['month-cell', sep, willComment ? 'has-comment' : '']
+          .filter(Boolean).join(' ');
+
+        html += `<td class="${cls}">`;
+
         if (overlaps) {
           html += '<div class="bar-wrap">';
+          const tipF = dayFrac(tipStr, m);
 
-          // ---- 本体（開始〜終了）セグメント ----
-          const barS = rs >= m && rs < mNext ? dayFrac(row.start, m) : (rs < m ? 0 : 1);
-          const barE = re >= m && re < mNext ? dayFrac(row.end, m)   : (re >= mNext ? 1 : 0);
-          const barW = (re >= mNext ? 1 : barE) - barS;
-
-          // このセルに開始端／終了端が含まれるか（角丸・縦ボーダーの出し分け）
+          // ---- 本体セグメント（開始〜終了） ----
+          const bodyL = dayFrac(row.start, m);
+          const bodyR = dayFrac(row.end,   m);
+          const bodyW = bodyR - bodyL;
           const isStartCell = rs >= m && rs < mNext;
           const isEndCell   = re >= m && re < mNext;
 
-          if (barW > 0) {
-            const rad = solidRadius(isStartCell, isEndCell);
-            html += `<div class="bar-solid"
-              style="background:${color};opacity:.18;left:${barS*100}%;width:${barW*100}%;${rad}"></div>`;
-
-            const seg = segStyle(color, dashed, isStartCell, isEndCell);
-
+          if (bodyW > 0) {
+            // 右端を丸めるのは「延長が無く、終了日がこのセルにある」時だけ
+            const roundR = isEndCell && !hasExt;
+            const radius = (isStartCell && roundR) ? '9px'
+                         : isStartCell ? '9px 0 0 9px'
+                         : roundR      ? '0 9px 9px 0' : '0';
             if (dashed) {
-              html += `<div class="bar-solid"
-                style="background:${color};opacity:.35;left:${barS*100}%;width:${barW*100}%;${rad}"></div>`;
+              html += `<div class="bar-dashed"
+                style="left:${bodyL*100}%;width:${bodyW*100}%;border-color:${color};border-radius:${radius}"
+                onclick="openPop(event,${row.id})"></div>`;
             } else {
-              html += `<div class="bar-solid"
-                style="background:${color};left:${barS*100}%;width:${barW*100}%;${rad}"></div>`;
-            }
-
-            html += `<div class="bar-frame editable"
-              style="left:${barS*100}%;width:${barW*100}%;${seg}"
-              onclick="editKoji(${row.id})"></div>`;
-
-            // バーの上にコメント（あれば）を表示。画面・印刷とも。
-            // バーが画面範囲より前から始まっていてもよう、最初に見えるセルで描画する。
-            if (row.comment && !commentRendered) {
-              const cmtLeft = isStartCell ? barS : 0;
-              html += `<div class="bar-comment"
-                style="left:${cmtLeft*100}%">${row.comment}</div>`;
-              commentRendered = true;
-            }
-
-            if (re >= m && re < mNext && !rex) {
-              html += `<div class="bar-date-label"
-                style="left:${barE*100}%;color:${color}">
-                ${re.getMonth()+1}/${re.getDate()}
+              // 進捗の先端までを塗る（セルをまたいで連続する）
+              const fillPct = Math.max(0, Math.min(100,
+                ((Math.min(bodyR, tipF) - bodyL) / bodyW) * 100));
+              html += `<div class="bar-track"
+                style="left:${bodyL*100}%;width:${bodyW*100}%;background:${light};border-radius:${radius}"
+                onclick="openPop(event,${row.id})">
+                <div class="bar-fill" style="width:${fillPct}%;background:${color}"></div>
               </div>`;
             }
           }
 
-          // ---- 延長セグメント（必ず破線） ----
-          if (rex && rex > re) {
-            const extS = re >= m && re < mNext ? barE : (re < m ? 0 : 1);
-            const extE = rex >= m && rex < mNext ? dayFrac(row.ext, m) : (rex >= mNext ? 1 : 0);
-            const extW = extE - extS;
-
-            const extStartCell = re >= m && re < mNext;
-            const extEndCell   = rex >= m && rex < mNext;
+          // ---- 延長セグメント（終了〜延長日）。常に破線 ----
+          if (hasExt) {
+            const extL = dayFrac(row.end, m);
+            const extR = dayFrac(row.ext, m);
+            const extW = extR - extL;
+            const extEndCell = rex >= m && rex < mNext;
 
             if (extW > 0) {
-              const extRad = solidRadius(extStartCell, extEndCell);
-              html += `<div class="bar-solid"
-                style="background:${color};opacity:.35;left:${extS*100}%;width:${extW*100}%;${extRad}"></div>`;
-              const seg = segStyle(color, true, extStartCell, extEndCell);
-              html += `<div class="bar-frame editable"
-                style="left:${extS*100}%;width:${extW*100}%;${seg}"
-                onclick="editKoji(${row.id})"></div>`;
-            }
-
-            if (rex >= m && rex < mNext) {
-              html += `<div class="bar-date-label"
-                style="left:${extE*100}%;color:${color}">
-                ${rex.getMonth()+1}/${rex.getDate()}
-              </div>`;
+              const radius = extEndCell ? '0 9px 9px 0' : '0';
+              html += `<div class="bar-dashed"
+                style="left:${extL*100}%;width:${extW*100}%;border-color:${color};border-radius:${radius};border-left:none"
+                onclick="openPop(event,${row.id})"></div>`;
+              // 延長区間にも進捗が届いていれば、薄く塗る
+              if (!dashed && tipF > extL) {
+                const fillW = Math.min(extR, tipF) - extL;
+                html += `<div class="bar-ext-fill"
+                  style="left:${extL*100}%;width:${fillW*100}%;background:${color}"></div>`;
+              }
             }
           }
 
-          // 月別出来高ラベル（バー右下）。値があれば %、なければ ＋。クリックで入力モーダル
-          {
-            const mKey  = monthKey(m);
-            const mpObj = row.monthlyProgress || {};
-            // 0%は表示しない（empty扱いで「＋」だけ・通常は非表示）
-            const hasVal = typeof mpObj[mKey] === 'number' && mpObj[mKey] > 0;
-            const pctText = hasVal ? `${mpObj[mKey]}%` : '＋';
-            const emptyCls = hasVal ? '' : 'empty';
-            // バーの右端位置（延長があれば延長末、なければ本体末）に合わせる
-            const barEndStr = (rex && rex > re && row.ext) ? row.ext : row.end;
-            const rightFrac = dayFrac(barEndStr, m);
-            html += `<div class="month-prog ${emptyCls}"
-              style="left:${rightFrac*100}%"
-              onclick="event.stopPropagation();openProgModal(${row.id},'${mKey}')"
-              title="${m.getFullYear()}年${m.getMonth()+1}月の出来高">${pctText}</div>`;
+          // ---- ラベルはバー右端（＝実効終了日）に1回だけ ----
+          const effEndCell = effEnd >= m && effEnd < mNext;
+          if (effEndCell) {
+            const endF = dayFrac(effEndStr, m);
+            if (!dashed) {
+              html += `<div class="bar-pct" style="left:0;width:${endF*100}%;color:${color}">${row.progress}%</div>`;
+            }
+            html += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${effEnd.getMonth()+1}/${effEnd.getDate()}${hasExt ? '(延)' : ''}</div>`;
+          }
+
+          if (willComment && bodyW > 0) {
+            html += `<div class="bar-comment" style="left:${isStartCell ? bodyL*100 : 0}%">💬 ${escapeHtml(row.comment)}</div>`;
+            commentDone = true;
           }
 
           html += '</div>';
@@ -1302,178 +1209,162 @@ function renderGantt(monthsOverride, forPrint) {
   document.getElementById('gantt-container').innerHTML = html;
 }
 
-// 塗り（.bar-solid）の角丸を出し分け。
-// 通過セルでは塗りも四角にして、隣セルの塗りと継ぎ目なく繋ぐ。
-function solidRadius(isStartCell, isEndCell) {
-  if (isStartCell && isEndCell) return 'border-radius:5px;';
-  if (isStartCell)              return 'border-radius:5px 0 0 5px;';
-  if (isEndCell)                return 'border-radius:0 5px 5px 0;';
-  return 'border-radius:0;';
-}
+/* ---------- バー押下パネル ---------- */
 
-// セグメントの枠線スタイルを生成。
-// 開始端を含むセルだけ左ボーダー＋左角丸、終了端を含むセルだけ右ボーダー＋右角丸。
-// 通過セルは上下ボーダーのみ → 月の継ぎ目で縦線が出ず、はみ出しも消える。
-function segStyle(color, dashed, isStartCell, isEndCell) {
-  const style = dashed ? 'dashed' : 'solid';
-  let css = `border-top:2px ${style} ${color};border-bottom:2px ${style} ${color};border-radius:0;`;
-  if (isStartCell) {
-    css += `border-left:2px ${style} ${color};border-top-left-radius:5px;border-bottom-left-radius:5px;`;
-  }
-  if (isEndCell) {
-    css += `border-right:2px ${style} ${color};border-top-right-radius:5px;border-bottom-right-radius:5px;`;
-  }
-  return css;
-}
+function openPop(e, id) {
+  e.stopPropagation();
+  const r = kojiData.find(x => x.id === id);
+  if (!r) return;
+  editId = id;
 
-function openKojiModal(id = null, options = {}) {
-  editKojiId = id;
-  const r = id ? kojiData.find(x => x.id === id) : null;
-  const isEdit       = !!r;
-  const adminAdd     = !isEdit && isAdmin;
-  const adminEdit    = isEdit && isAdmin;
-  const nonAdminEdit = isEdit && !isAdmin;
+  document.getElementById('pop-title').textContent = r.name;
+  document.getElementById('pop-sub').textContent   =
+    `${r.person} / ${r.type} / ${r.config}`;
 
-  // 非管理者がADD押下しても何も起こらないようガード（呼び出し側で防いでいるが念のため）
-  if (!isEdit && !isAdmin) {
-    showToast('管理者のみ追加できます', true);
-    return;
-  }
+  // 進捗タブ
+  document.getElementById('pop-range').value = r.progress;
+  syncVal(r.progress);
+  document.getElementById('pop-comment').value = r.comment || '';
 
-  // タイトル
-  let title = '工事追加';
-  if (adminEdit)    title = '工事編集';
-  if (nonAdminEdit) title = '工期変更';
-  document.getElementById('koji-modal-title').textContent = title;
-
-  // 担当者プルダウン
-  const personPrefill = options.person || (r ? r.person : '');
+  // 工期タブ（管理者は担当者・工事名・種別・配置も出す）
   const ps = document.getElementById('f-person');
-  ps.innerHTML = '<option value="">— 選択してください —</option>';
+  ps.innerHTML = '';
   masters.forEach(p => {
     const o = document.createElement('option');
     o.value = p; o.textContent = p; ps.appendChild(o);
   });
-  ps.value = personPrefill;
+  ps.value = r.person;
 
-  // 工事名プルダウン
   const ns = document.getElementById('f-name');
-  ns.innerHTML = '<option value="">— 選択してください —</option>';
-  kojiMasters.forEach(k => {
+  ns.innerHTML = '';
+  const names = kojiMasters.includes(r.name) ? kojiMasters : [r.name, ...kojiMasters];
+  names.forEach(k => {
     const o = document.createElement('option');
     o.value = k; o.textContent = k; ns.appendChild(o);
   });
-  ns.value = r ? r.name : '';
+  ns.value = r.name;
 
-  document.getElementById('f-type').value   = r ? r.type   : '元請';
-  document.getElementById('f-config').value = r ? r.config : '常駐';
-  document.getElementById('f-start').value  = r ? r.start  : '';
-  document.getElementById('f-end').value    = r ? r.end    : '';
-  document.getElementById('f-ext').value    = r ? r.ext    : '';
+  document.getElementById('f-type').value   = r.type;
+  document.getElementById('f-config').value = r.config;
+  document.getElementById('f-start').value  = r.start;
+  document.getElementById('f-end').value    = r.end;
+  document.getElementById('f-ext').value    = r.ext || '';
 
-  // モードに応じてフィールドの表示/非表示を切替
-  //   ADD（管理者）：工事名/種別/配置/開始/終了/延長を表示。担当者は事前指定で非表示。
-  //   EDIT 管理者：全項目表示＋削除ボタン
-  //   EDIT 非管理者：工期（開始/終了/延長）のみ表示
-  const showPerson = adminEdit;
-  const showName   = adminAdd || adminEdit;
-  const showType   = adminAdd || adminEdit;
-  const showConfig = showType;
-  setRowVis('f-person-row', showPerson);
-  setRowVis('f-name-row',   showName);
-  setRowVis('f-type-row',   showType);
-  setRowVis('f-config-row', showConfig);
-  // 工期（開始/終了/延長）は全モード共通で表示
-  setRowVis('f-start-row', true);
-  setRowVis('f-end-row',   true);
-  setRowVis('f-ext-row',   true);
+  // 管理者は「工事編集」から、監督は「進捗・コメント」から開く
+  document.getElementById('tab-term').textContent = isAdmin ? '工事編集' : '工期変更';
+  switchPopTab(isAdmin ? 'term' : 'prog');
 
-  document.getElementById('btn-koji-del').style.display = adminEdit ? '' : 'none';
+  const pop = document.getElementById('popover');
+  pop.classList.add('open');
+  document.getElementById('backdrop').classList.add('open');
 
-  document.getElementById('modal-koji').classList.add('open');
-}
+  const rect = e.currentTarget.getBoundingClientRect();
+  const popW = pop.offsetWidth;
+  const popH = pop.offsetHeight;
 
-function setRowVis(id, show) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = show ? '' : 'none';
-}
+  let left = rect.left + window.scrollX - 20;
+  left = Math.min(left, window.scrollX + window.innerWidth - popW - 12);
+  left = Math.max(left, window.scrollX + 8);
 
-function editKoji(id) {
-  // 管理者：全項目編集／非管理者：工期のみ編集（openKojiModal内で出し分け）
-  openKojiModal(id);
-}
-
-async function saveKoji() {
-  const existing = editKojiId ? kojiData.find(x => x.id === editKojiId) : null;
-  const isEdit = !!existing;
-  const adminAdd     = !isEdit && isAdmin;
-  const adminEdit    = isEdit && isAdmin;
-  const nonAdminEdit = isEdit && !isAdmin;
-
-  if (!adminAdd && !adminEdit && !nonAdminEdit) {
-    alert('権限がありません'); return;
-  }
-
-  let entry;
-  if (adminAdd) {
-    // ADD：担当者は事前指定、工事名/種別/配置/工期はフォームから
-    entry = {
-      id:       nextId++,
-      person:   document.getElementById('f-person').value,
-      name:     document.getElementById('f-name').value,
-      type:     document.getElementById('f-type').value,
-      config:   document.getElementById('f-config').value,
-      start:    document.getElementById('f-start').value,
-      end:      document.getElementById('f-end').value,
-      ext:      document.getElementById('f-ext').value,
-      progress: 0,
-      comment:  '',
-    };
-    if (!entry.person || !entry.name || !entry.start || !entry.end) {
-      alert('担当者・工事名・開始日・終了日は必須です'); return;
-    }
-  } else if (adminEdit) {
-    // 管理者編集：全項目反映
-    entry = {
-      ...existing,
-      person: document.getElementById('f-person').value,
-      name:   document.getElementById('f-name').value,
-      type:   document.getElementById('f-type').value,
-      config: document.getElementById('f-config').value,
-      start:  document.getElementById('f-start').value,
-      end:    document.getElementById('f-end').value,
-      ext:    document.getElementById('f-ext').value,
-    };
-    if (!entry.person || !entry.name || !entry.start || !entry.end) {
-      alert('担当者・工事名・開始日・終了日は必須です'); return;
-    }
+  // 下に入りきらなければバーの上に出す
+  let top = rect.bottom + window.scrollY + 9;
+  if (rect.bottom + popH + 20 > window.innerHeight) {
+    top = rect.top + window.scrollY - popH - 9;
+    document.querySelector('.pop-arrow').style.display = 'none';
   } else {
-    // 非管理者編集：工期だけ更新（他項目は既存を維持）
-    entry = {
-      ...existing,
-      start: document.getElementById('f-start').value,
-      end:   document.getElementById('f-end').value,
-      ext:   document.getElementById('f-ext').value,
-    };
-    if (!entry.start || !entry.end) {
-      alert('開始日・終了日は必須です'); return;
-    }
+    document.querySelector('.pop-arrow').style.display = '';
   }
 
-  if (entry.start > entry.end) {
-    alert('開始日は終了日より前にしてください'); return;
+  pop.style.left = left + 'px';
+  pop.style.top  = Math.max(top, window.scrollY + 8) + 'px';
+}
+
+// 工事名セルから開く場合は最初から工期タブ
+function openPopTerm(e, id) {
+  openPop(e, id);
+  switchPopTab('term');
+}
+
+function switchPopTab(t) {
+  document.getElementById('tab-prog').classList.toggle('active', t === 'prog');
+  document.getElementById('tab-term').classList.toggle('active', t === 'term');
+  document.getElementById('panel-prog').classList.toggle('active', t === 'prog');
+  document.getElementById('panel-term').classList.toggle('active', t === 'term');
+}
+
+function closePop() {
+  document.getElementById('popover').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('open');
+  editId = null;
+}
+
+function syncVal(v) {
+  const r = kojiData.find(x => x.id === editId);
+  const el = document.getElementById('pop-val');
+  el.textContent = v + '%';
+  el.style.color = r ? (COLOR[r.type] || '#2055a0') : '#2055a0';
+}
+
+function stepProg(d) {
+  const range = document.getElementById('pop-range');
+  const v = Math.max(0, Math.min(100, parseInt(range.value) + d));
+  range.value = v;
+  syncVal(v);
+}
+
+// 進捗・コメントを保存。同一工事（工事名＋工期が同じ）を複数担当で持つ場合は同期。
+async function saveProgPop() {
+  const r = kojiData.find(x => x.id === editId);
+  if (!r) return;
+  const prog    = parseInt(document.getElementById('pop-range').value);
+  const comment = document.getElementById('pop-comment').value.trim();
+
+  const key     = r.name + '__' + r.start + '__' + r.end;
+  const targets = kojiData.filter(x => x.name + '__' + x.start + '__' + x.end === key);
+
+  showLoading(true);
+  try {
+    await Promise.all(targets.map(t =>
+      gasPost({ action:'saveProgress', id: t.id, progress: prog, comment })
+    ));
+    targets.forEach(t => { t.progress = prog; t.comment = comment; });
+    closePop();
+    renderGantt();
+    const syncMsg = targets.length > 1 ? `（${targets.length}件同期）` : '';
+    showToast('進捗を保存しました' + syncMsg);
+  } catch(e) {
+    showToast('保存エラー: ' + e.message, true);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// 工期を保存。管理者なら担当者・工事名・種別・配置も反映。
+async function saveTermPop() {
+  const existing = kojiData.find(x => x.id === editId);
+  if (!existing) return;
+
+  const start = document.getElementById('f-start').value;
+  const end   = document.getElementById('f-end').value;
+  const ext   = document.getElementById('f-ext').value;
+  if (!start || !end) { alert('開始日・終了日は必須です'); return; }
+  if (start > end)    { alert('開始日は終了日より前にしてください'); return; }
+  if (ext && ext < end) { alert('延長日は終了日より後にしてください'); return; }
+
+  const entry = { ...existing, start, end, ext };
+  if (isAdmin) {
+    entry.person = document.getElementById('f-person').value;
+    entry.name   = document.getElementById('f-name').value;
+    entry.type   = document.getElementById('f-type').value;
+    entry.config = document.getElementById('f-config').value;
+    if (!entry.person || !entry.name) { alert('担当者・工事名は必須です'); return; }
   }
 
   showLoading(true);
   try {
-    await gasPost({ action: 'saveKoji', password: ADMIN_PW, data: entry });
-    if (editKojiId) {
-      kojiData[kojiData.findIndex(x => x.id === editKojiId)] = entry;
-    } else {
-      kojiData.push(entry);
-      nextId = entry.id + 1;
-    }
-    closeModal('koji');
+    await gasPost({ action:'saveKoji', password: ADMIN_PW, data: entry });
+    kojiData[kojiData.findIndex(x => x.id === editId)] = entry;
+    closePop();
     renderGantt();
     showToast('保存しました');
   } catch(e) {
@@ -1483,13 +1374,15 @@ async function saveKoji() {
   }
 }
 
-async function deleteKoji() {
+async function delKojiPop() {
+  if (!isAdmin) return;
   if (!confirm('この工事を削除しますか？')) return;
+  const id = editId;
   showLoading(true);
   try {
-    await gasPost({ action: 'deleteKoji', password: ADMIN_PW, id: editKojiId });
-    kojiData = kojiData.filter(x => x.id !== editKojiId);
-    closeModal('koji');
+    await gasPost({ action:'deleteKoji', password: ADMIN_PW, id });
+    kojiData = kojiData.filter(x => x.id !== id);
+    closePop();
     renderGantt();
     showToast('削除しました');
   } catch(e) {
@@ -1499,115 +1392,73 @@ async function deleteKoji() {
   }
 }
 
-function renderProgress() {
-  let html = '';
-  kojiData.forEach(row => {
-    const color = COLOR[row.type] || '#888';
-    const prog  = row.progress || 0;
-    html += `<div class="prog-item" onclick="openProgModal(${row.id})">
-      <div class="prog-item-info">
-        <div class="prog-item-name">${row.name}</div>
-        <div class="prog-item-sub">${row.person} / ${row.type} / ${row.config} / ${fmtDate(row.start)} 〜 ${fmtDate(row.end)}</div>
-        ${row.comment ? `<div class="prog-item-memo">💬 ${row.comment}</div>` : ''}
-      </div>
-      <div class="prog-item-right">
-        <div class="prog-pct" style="color:${color}">${prog}%</div>
-        <div class="prog-bar-bg">
-          <div class="prog-bar-fill" style="background:${color};width:${prog}%"></div>
-        </div>
-      </div>
-      <span style="font-size:11px;color:var(--blue)">編集 ›</span>
-    </div>`;
+/* ---------- 新規追加モーダル（管理者のみ） ---------- */
+
+function openAddModal(person) {
+  if (!isAdmin) return;
+  const ps = document.getElementById('a-person');
+  ps.innerHTML = '<option value="">— 選択してください —</option>';
+  masters.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p; ps.appendChild(o);
   });
-  if (!kojiData.length) html = '<div class="empty">工事データがありません</div>';
-  document.getElementById('progress-list').innerHTML = html;
+  ps.value = person || '';
+
+  const ns = document.getElementById('a-name');
+  ns.innerHTML = '<option value="">— 選択してください —</option>';
+  kojiMasters.forEach(k => {
+    const o = document.createElement('option');
+    o.value = k; o.textContent = k; ns.appendChild(o);
+  });
+  ns.value = '';
+
+  document.getElementById('a-type').value   = '元請';
+  document.getElementById('a-config').value = '常駐';
+  document.getElementById('a-start').value  = '';
+  document.getElementById('a-end').value    = '';
+  document.getElementById('a-ext').value    = '';
+  document.getElementById('modal-add').classList.add('open');
 }
 
-function openProgModal(id, key) {
-  editProgId = id;
-  editProgMonth = key || null;
-  const r = kojiData.find(x => x.id === id);
-  if (!r) return;
+function closeAddModal() {
+  document.getElementById('modal-add').classList.remove('open');
+}
 
-  if (editProgMonth) {
-    // 月別出来高モード
-    document.getElementById('prog-modal-title').textContent =
-      `${r.name || '(無題)'} — ${formatMonthKey(editProgMonth)} 出来高`;
-    document.getElementById('prog-modal-sub').textContent =
-      `${r.person} / ${r.type} / 工期: ${fmtDate(r.start)} 〜 ${fmtDate(r.end)}`;
-    // プリフィル：その月の値があれば使用、なければ先月の値（出来高引き継ぎ）
-    let v = r.monthlyProgress && r.monthlyProgress[editProgMonth];
-    if (typeof v !== 'number') {
-      const prev = getPrevMonthProgress(r, editProgMonth);
-      v = typeof prev === 'number' ? prev : 0;
-    }
-    document.getElementById('prog-range').value = v;
-    document.getElementById('prog-big').textContent = v + '%';
-  } else {
-    // 旧モード（工事全体の進捗・「進捗入力」タブから）
-    document.getElementById('prog-modal-title').textContent = r.name || '(無題)';
-    document.getElementById('prog-modal-sub').textContent =
-      `${r.person} / ${r.type} / ${fmtDate(r.start)} 〜 ${fmtDate(r.end)}`;
-    const v = r.progress || 0;
-    document.getElementById('prog-range').value = v;
-    document.getElementById('prog-big').textContent = v + '%';
+async function saveAdd() {
+  const entry = {
+    id:       nextId,
+    person:   document.getElementById('a-person').value,
+    name:     document.getElementById('a-name').value,
+    type:     document.getElementById('a-type').value,
+    config:   document.getElementById('a-config').value,
+    start:    document.getElementById('a-start').value,
+    end:      document.getElementById('a-end').value,
+    ext:      document.getElementById('a-ext').value,
+    progress: 0,
+    comment:  '',
+  };
+  if (!entry.person || !entry.name || !entry.start || !entry.end) {
+    alert('担当者・工事名・開始日・終了日は必須です'); return;
   }
-  document.getElementById('prog-comment').value = r.comment || '';
-  document.getElementById('modal-prog').classList.add('open');
-}
-
-async function saveProg() {
-  const r = kojiData.find(x => x.id === editProgId);
-  if (!r) return;
-  const prog    = parseInt(document.getElementById('prog-range').value);
-  const comment = document.getElementById('prog-comment').value.trim();
-
-  const syncKey = r.name + '__' + r.start + '__' + r.end;
-  const targets = kojiData.filter(x => x.name + '__' + x.start + '__' + x.end === syncKey);
+  if (entry.start > entry.end) { alert('開始日は終了日より前にしてください'); return; }
+  if (entry.ext && entry.ext < entry.end) { alert('延長日は終了日より後にしてください'); return; }
 
   showLoading(true);
   try {
-    if (editProgMonth) {
-      // 月別出来高を保存。progressは全体の最大値で同期
-      await Promise.all(targets.map(t => {
-        const mp = { ...(t.monthlyProgress || {}), [editProgMonth]: prog };
-        const vals = Object.values(mp).filter(v => typeof v === 'number');
-        const overall = vals.length ? Math.max(...vals) : 0;
-        return gasPost({
-          action: 'saveProgress',
-          id: t.id,
-          progress: overall,
-          comment,
-          monthlyProgress: JSON.stringify(mp),
-        });
-      }));
-      targets.forEach(t => {
-        t.monthlyProgress = { ...(t.monthlyProgress || {}), [editProgMonth]: prog };
-        const vals = Object.values(t.monthlyProgress).filter(v => typeof v === 'number');
-        t.progress = vals.length ? Math.max(...vals) : 0;
-        t.comment = comment;
-      });
-      const syncMsg = targets.length > 1 ? `（${targets.length}件同期）` : '';
-      showToast(`${formatMonthKey(editProgMonth)} の出来高を保存しました${syncMsg}`);
-    } else {
-      // 旧モード：単一progress更新
-      await Promise.all(targets.map(t =>
-        gasPost({ action: 'saveProgress', id: t.id, progress: prog, comment })
-      ));
-      targets.forEach(t => { t.progress = prog; t.comment = comment; });
-      const syncMsg = targets.length > 1 ? `（${targets.length}件の担当者で同期）` : '';
-      showToast('進捗を保存しました' + syncMsg);
-    }
-
-    closeModal('prog');
-    renderProgress();
+    await gasPost({ action:'saveKoji', password: ADMIN_PW, data: entry });
+    kojiData.push(entry);
+    nextId = entry.id + 1;
+    closeAddModal();
     renderGantt();
+    showToast('追加しました');
   } catch(e) {
     showToast('保存エラー: ' + e.message, true);
   } finally {
     showLoading(false);
   }
 }
+
+/* ---------- 進捗一覧 ---------- */
 
 function renderProgressOnly() {
   const sel  = document.getElementById('sel-prog-person');
@@ -1621,49 +1472,43 @@ function renderProgressOnly() {
 
   const fp   = sel.value;
   const list = fp ? kojiData.filter(r => r.person === fp) : kojiData;
-  if (!list.length) {
-    document.getElementById('progress-only-list').innerHTML = '<div class="empty">データがありません</div>';
-    return;
-  }
+  const el   = document.getElementById('progress-only-list');
+  if (!list.length) { el.innerHTML = '<div class="empty">データがありません</div>'; return; }
 
   const groups = {};
-  list.forEach(r => {
-    if (!groups[r.person]) groups[r.person] = [];
-    groups[r.person].push(r);
-  });
+  list.forEach(r => { (groups[r.person] = groups[r.person] || []).push(r); });
 
   let html = '';
   Object.entries(groups).forEach(([person, entries]) => {
-    html += `<div class="po-section">${person}</div>`;
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text-sub);padding:6px 2px;border-bottom:1px solid var(--border);margin:8px 0">${escapeHtml(person)}</div>`;
     entries.forEach(row => {
-      const color  = COLOR[row.type] || '#888';
-      const bg     = TYPE_BG[row.type] || '#f0f0f0';
-      const fg     = TYPE_FG[row.type] || '#444';
-      const prog   = row.progress || 0;
-      const cfgBg  = row.config === '常駐' ? '#e8f0fc' : '#f0eafc';
-      const cfgFg  = row.config === '常駐' ? '#1a4a8a' : '#5a1090';
-      html += `<div class="po-card">
-        <div class="po-card-header">
+      const color = COLOR[row.type] || '#888';
+      const bg    = TYPE_BG[row.type] || '#f0f0f0';
+      const fg    = TYPE_FG[row.type] || '#444';
+      const prog  = row.progress || 0;
+      const extTxt = row.ext ? ` → ${fmtDate(row.ext)}（延長）` : '';
+      html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:9px">
           <div style="flex:1;min-width:0">
-            <div class="po-card-title">${row.name}</div>
-            <div class="po-card-meta">
-              <span class="po-badge" style="background:${bg};color:${fg}">${row.type}</span>
-              <span class="po-badge" style="background:${cfgBg};color:${cfgFg}">${row.config}</span>
-              <span class="po-card-dates">${fmtDate(row.start)} 〜 ${fmtDate(row.end)}</span>
+            <div style="font-size:13px;font-weight:700">${escapeHtml(row.name)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;align-items:center">
+              <span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:${bg};color:${fg}">${row.type}</span>
+              <span style="font-size:11px;color:var(--text-sub)">${fmtDate(row.start)} 〜 ${fmtDate(row.end)}${extTxt}</span>
             </div>
           </div>
-          <div class="po-card-pct" style="color:${color}">${prog}%</div>
+          <div style="font-size:22px;font-weight:700;color:${color};white-space:nowrap">${prog}%</div>
         </div>
-        <div class="po-bar-track">
-          <div class="po-bar-fill" style="background:${color};width:${prog}%"></div>
+        <div style="width:100%;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:8px">
+          <div style="height:100%;border-radius:3px;background:${color};width:${prog}%"></div>
         </div>
-        ${row.comment ? `<div class="po-card-memo">💬 ${row.comment}</div>` : ''}
+        ${row.comment ? `<div style="font-size:11px;color:#7a5000;background:#fff8e4;border:1px solid #f0d070;border-radius:6px;padding:6px 10px;line-height:1.5;white-space:pre-wrap">💬 ${escapeHtml(row.comment)}</div>` : ''}
       </div>`;
     });
   });
-
-  document.getElementById('progress-only-list').innerHTML = html;
+  el.innerHTML = html;
 }
+
+/* ---------- マスタ ---------- */
 
 function renderPersonChips() {
   const el = document.getElementById('person-chips');
@@ -1672,11 +1517,9 @@ function renderPersonChips() {
     return;
   }
   el.innerHTML = masters.map(name =>
-    `<div class="chip">
-      <span>${name}</span>
-      <button class="chip-del" onclick="removePerson('${name}')" title="削除">×</button>
-    </div>`
-  ).join('');
+    `<div class="chip"><span>${escapeHtml(name)}</span>
+      <button class="chip-del" onclick="removePerson('${String(name).replace(/'/g,"\\'")}')" title="削除">×</button>
+    </div>`).join('');
 }
 
 async function addPerson() {
@@ -1686,7 +1529,7 @@ async function addPerson() {
   if (masters.includes(name)) { alert('すでに登録されています'); return; }
   showLoading(true);
   try {
-    await gasPost({ action: 'saveMaster', password: ADMIN_PW, name });
+    await gasPost({ action:'saveMaster', password: ADMIN_PW, name });
     masters.push(name);
     inp.value = '';
     renderPersonChips();
@@ -1694,9 +1537,7 @@ async function addPerson() {
     showToast(name + ' を追加しました');
   } catch(e) {
     showToast('エラー: ' + e.message, true);
-  } finally {
-    showLoading(false);
-  }
+  } finally { showLoading(false); }
 }
 
 async function removePerson(name) {
@@ -1704,16 +1545,14 @@ async function removePerson(name) {
   if (used && !confirm(`「${name}」は工事データで使用中です。削除しますか？`)) return;
   showLoading(true);
   try {
-    await gasPost({ action: 'deleteMaster', password: ADMIN_PW, name });
+    await gasPost({ action:'deleteMaster', password: ADMIN_PW, name });
     masters = masters.filter(m => m !== name);
     renderPersonChips();
     renderGantt();
     showToast(name + ' を削除しました');
   } catch(e) {
     showToast('エラー: ' + e.message, true);
-  } finally {
-    showLoading(false);
-  }
+  } finally { showLoading(false); }
 }
 
 function renderKojiChips() {
@@ -1723,11 +1562,9 @@ function renderKojiChips() {
     return;
   }
   el.innerHTML = kojiMasters.map(name =>
-    `<div class="chip">
-      <span>${name}</span>
-      <button class="chip-del" onclick="removeKoji('${name}')" title="削除">×</button>
-    </div>`
-  ).join('');
+    `<div class="chip"><span>${escapeHtml(name)}</span>
+      <button class="chip-del" onclick="removeKoji('${String(name).replace(/'/g,"\\'")}')" title="削除">×</button>
+    </div>`).join('');
 }
 
 async function addKoji() {
@@ -1737,16 +1574,14 @@ async function addKoji() {
   if (kojiMasters.includes(name)) { alert('すでに登録されています'); return; }
   showLoading(true);
   try {
-    await gasPost({ action: 'saveKojiMaster', password: ADMIN_PW, name });
+    await gasPost({ action:'saveKojiMaster', password: ADMIN_PW, name });
     kojiMasters.push(name);
     inp.value = '';
     renderKojiChips();
     showToast(name + ' を追加しました');
   } catch(e) {
     showToast('エラー: ' + e.message, true);
-  } finally {
-    showLoading(false);
-  }
+  } finally { showLoading(false); }
 }
 
 async function removeKoji(name) {
@@ -1754,50 +1589,13 @@ async function removeKoji(name) {
   if (used && !confirm(`「${name}」は工事データで使用中です。削除しますか？`)) return;
   showLoading(true);
   try {
-    await gasPost({ action: 'deleteKojiMaster', password: ADMIN_PW, name });
+    await gasPost({ action:'deleteKojiMaster', password: ADMIN_PW, name });
     kojiMasters = kojiMasters.filter(m => m !== name);
     renderKojiChips();
     showToast(name + ' を削除しました');
   } catch(e) {
     showToast('エラー: ' + e.message, true);
-  } finally {
-    showLoading(false);
-  }
-}
-
-async function saveGasUrl() {
-  const url = document.getElementById('gas-url-input').value.trim();
-  if (!url) { alert('URLを入力してください'); return; }
-  GAS_URL = url;
-  localStorage.setItem('gasUrl', url);
-  showLoading(true);
-  try {
-    const d     = await gasGet({ action: 'getAll' });
-    masters     = d.masters     || [];
-    kojiMasters = d.kojiMasters || [];
-    kojiData    = normalizeKoji(d.koji);
-    nextId      = kojiData.length ? Math.max(...kojiData.map(r => r.id)) + 1 : 1;
-    document.getElementById('conn-status').innerHTML =
-      '<span style="color:var(--green)">✓ 接続成功 — データを読み込みました</span>';
-    document.getElementById('url-banner').style.display = 'none';
-    renderGantt();
-    showToast('接続成功');
-  } catch(e) {
-    document.getElementById('conn-status').innerHTML =
-      `<span style="color:var(--red)">✗ 接続失敗: ${e.message}</span>`;
-    showToast('接続失敗: ' + e.message, true);
-  } finally {
-    showLoading(false);
-  }
-}
-
-function clearGasUrl() {
-  GAS_URL = '';
-  localStorage.removeItem('gasUrl');
-  document.getElementById('gas-url-input').value = '';
-  document.getElementById('conn-status').innerHTML = '';
-  document.getElementById('url-banner').style.display = 'flex';
-  showToast('URLをクリアしました');
+  } finally { showLoading(false); }
 }
 
 function changePw() {
@@ -1809,26 +1607,25 @@ function changePw() {
   showToast('パスワードを変更しました');
 }
 
+/* ---------- 印刷 ---------- */
+
 function printGantt() {
   switchTab('gantt');
+  closePop();
   const now = new Date();
   document.getElementById('print-date').textContent =
     `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 時点`;
 
-  // 年度（4月始まり）の12ヶ月＋種別記号付きで再描画してから印刷
   renderGantt(getFiscalMonths(), true);
 
-  // 印刷時の高さを画面に反映（.print-mode）→ 実測 → A4縦1ページに収まるよう縮小
   const page  = document.getElementById('page-gantt');
   const scale = document.getElementById('print-scale');
   page.classList.add('print-mode');
   scale.style.zoom = '';
 
-  const table = document.querySelector('#gantt-container table');
-  const PAGE_H = 1060;                             // A4縦・余白8mmでの印刷可能高さ(px相当)
-  const total  = (table ? table.offsetHeight : 0) + 90;  // ＋印刷ヘッダ・凡例
-  // 縦方向のみで縮小判定。横は table {width:100%} で自動収まる。
-  // ＋安全マージン 0.97 を掛けて右端の罫線切れを防ぐ
+  const table  = document.querySelector('#gantt-container table');
+  const PAGE_H = 1060;
+  const total  = (table ? table.offsetHeight : 0) + 90;
   const s = Math.min(1, PAGE_H / total) * 0.97;
   scale.style.zoom = String(s);
 
@@ -1838,7 +1635,7 @@ function printGantt() {
 window.addEventListener('afterprint', () => {
   document.getElementById('page-gantt').classList.remove('print-mode');
   document.getElementById('print-scale').style.zoom = '';
-  renderGantt();                                  // 画面表示を通常（横・選択期間）に戻す
+  renderGantt();
 });
 </script>
 </body>
