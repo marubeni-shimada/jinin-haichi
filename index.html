@@ -190,6 +190,7 @@ body {
 .leg-bar { width: 20px; height: 8px; border-radius: 4px; flex-shrink: 0; }
 .leg-bar-sm { width: 10px; height: 8px; border-radius: 4px; flex-shrink: 0; }
 .leg-dashed { width: 22px; height: 0; border-top: 2px dashed var(--border-hard); }
+.leg-gap { width: 22px; height: 0; border-top: 1.5px dotted #999; }
 .gantt-wrap {
   overflow-x: auto;
   max-height: calc(100vh - var(--header-h) - 130px);
@@ -285,6 +286,17 @@ td.month-cell.has-comment { z-index: 5; }
   height: 18px; opacity: .40;
   pointer-events: none; z-index: 1;
 }
+/* 中断期間（第1期間の終わり〜再開日）をつなぐ点線 */
+.gap-line {
+  position: absolute; top: 50%; height: 0;
+  border-top: 1.5px dotted #aaa;
+  pointer-events: none; z-index: 1;
+}
+.gap-label {
+  position: absolute; top: 8px;
+  font-size: 9px; color: #999;
+  pointer-events: none; white-space: nowrap;
+}
 .bar-end-date {
   position: absolute; top: 76%;
   font-size: 10px; font-weight: 600;
@@ -371,6 +383,21 @@ body.is-admin #tab-term { order: -1; }
 /* 管理者だけに見せる項目 */
 .admin-only-field { display: none; }
 body.is-admin .admin-only-field { display: flex; }
+
+/* 第2期間セクション */
+.p2-section { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 11px; }
+.p2-head {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+}
+.p2-title { font-size: 10px; font-weight: 700; color: var(--text-sub); letter-spacing: .05em; }
+.p2-toggle {
+  font-size: 11px; color: var(--blue); background: none; border: none;
+  cursor: pointer; font-family: inherit; padding: 0;
+}
+.p2-toggle:hover { text-decoration: underline; }
+.p2-body { display: none; }
+.p2-body.open { display: block; }
+.p2-hint { font-size: 10px; color: var(--text-sub); line-height: 1.6; margin-bottom: 8px; }
 .pop-footer { display: flex; gap: 8px; margin-top: 13px; }
 .pop-footer button {
   padding: 9px; border-radius: 8px; font-size: 13px; cursor: pointer;
@@ -496,6 +523,8 @@ body.is-admin .btn-del { display: block; }
     height: 12px !important;
     top: 50% !important; transform: translateY(-50%) !important;
   }
+  .gap-line { top: 50% !important; border-top-color: #888 !important; }
+  .gap-label { top: 4px !important; font-size: 10px !important; color: #666 !important; }
   .bar-end-date {
     top: 80% !important; bottom: auto !important;
     transform: translateY(-50%) !important;
@@ -588,6 +617,7 @@ body.is-admin .btn-del { display: block; }
       <div class="leg-bar-sm" style="background:#c93535"></div>濃=進捗
     </div>
     <div class="leg"><div class="leg-dashed"></div>スポット / 予定 / 延長</div>
+    <div class="leg"><div class="leg-gap"></div>中断（参加なし）</div>
   </div>
   <div id="print-area">
     <div id="print-scale">
@@ -600,6 +630,7 @@ body.is-admin .btn-del { display: block; }
         <div class="leg"><div class="leg-bar" style="background:#1c8050"></div>民間</div>
         <div class="leg"><div class="leg-bar" style="background:#2055a0"></div>予定</div>
         <div class="leg"><div class="leg-dashed"></div>スポット / 予定 / 延長</div>
+        <div class="leg"><div class="leg-gap"></div>中断</div>
       </div>
       <div class="gantt-wrap">
         <div id="gantt-container"></div>
@@ -692,6 +723,8 @@ body.is-admin .btn-del { display: block; }
     <div class="form-row"><label>開始日</label><input type="date" id="a-start"></div>
     <div class="form-row"><label>終了日</label><input type="date" id="a-end"></div>
     <div class="form-row"><label>延長日（任意）</label><input type="date" id="a-ext"></div>
+    <div class="form-row"><label>第2期間 再開日（任意）</label><input type="date" id="a-start2"></div>
+    <div class="form-row"><label>第2期間 終了日（任意）</label><input type="date" id="a-end2"></div>
     <div class="modal-footer">
       <div></div>
       <div class="modal-footer-right">
@@ -762,6 +795,19 @@ body.is-admin .btn-del { display: block; }
     <div class="f-row"><label>開始日</label><input type="date" id="f-start"></div>
     <div class="f-row"><label>終了日</label><input type="date" id="f-end"></div>
     <div class="f-row"><label>延長日（任意）</label><input type="date" id="f-ext"></div>
+
+    <div class="p2-section">
+      <div class="p2-head">
+        <span class="p2-title">第2期間（間を空けて再参加）</span>
+        <button class="p2-toggle" id="p2-toggle" onclick="toggleP2()">＋ 追加</button>
+      </div>
+      <div class="p2-body" id="p2-body">
+        <div class="p2-hint">一度離れて、また同じ工事に戻る場合に入力します。「− 削除」で第2期間なしに戻せます。</div>
+        <div class="f-row"><label>再開日</label><input type="date" id="f-start2"></div>
+        <div class="f-row"><label>終了日</label><input type="date" id="f-end2"></div>
+      </div>
+    </div>
+
     <div class="pop-footer">
       <button class="btn-del" onclick="delKojiPop()">削除</button>
       <button class="btn-close" onclick="closePop()">閉じる</button>
@@ -777,7 +823,7 @@ body.is-admin .btn-del { display: block; }
    GAS Web App URL をここに直接書き込む（全員が設定不要で使える）
    例: 'https://script.google.com/macros/s/AKfycb.../exec'
    ========================================================= */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuJiPicW9YWHyC9BA2FSur4BsWk6o3fqWqiDhAzBwdVr98K9VPAMiYEM8p0j5vkoI/exec';
+const GAS_URL = 'ここにGASのWebApp URLを貼り付けてください';
 
 const COLOR = { 元請:'#c93535', 民間:'#1c8050', 予定:'#2055a0' };
 const LIGHT = { 元請:'#f7e3e3', 民間:'#e2f2ea', 予定:'#e3ebf7' };
@@ -815,11 +861,22 @@ function fmtDate(s) {
 function normalizeKoji(list) {
   return (list || []).map(r => ({
     ...r,
-    start: fmtDate(r.start),
-    end:   fmtDate(r.end),
-    ext:   fmtDate(r.ext),
+    start:  fmtDate(r.start),
+    end:    fmtDate(r.end),
+    ext:    fmtDate(r.ext),
+    start2: fmtDate(r.start2),
+    end2:   fmtDate(r.end2),
     progress: Number(r.progress) || 0,
   }));
+}
+
+// 第2期間（間を空けて再参加）を持つか
+function hasP2(r) { return !!(r.start2 && r.end2); }
+
+// 工事の実質的な最終終了日（第2期間 > 延長 > 終了日）
+function finalEndStrOf(r) {
+  if (hasP2(r)) return r.end2;
+  return (r.ext && r.ext > r.end) ? r.ext : r.end;
 }
 
 function escapeHtml(s) {
@@ -1031,11 +1088,11 @@ function renderGantt(monthsOverride, forPrint) {
   });
   sel.value = prev;
 
-  // 終了日（延長があれば延長日）が「当月1日」より前の工事だけ非表示。
-  // → 終了日が当月内なら月末まで表示。月が変わると自動的に消える。
+  // 最終終了日（第2期間があればその終了日、なければ延長／終了日）が
+  // 「当月1日」より前の工事だけ非表示。→ 当月内なら月末まで表示。
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const isFinished = r => {
-    const eff = (r.ext && r.ext > r.end) ? r.ext : r.end;
+    const eff = finalEndStrOf(r);
     if (!eff) return false;
     return new Date(eff) < monthStart;
   };
@@ -1096,12 +1153,20 @@ function renderGantt(monthsOverride, forPrint) {
       const re     = new Date(row.end);
       const rex    = row.ext ? new Date(row.ext) : null;
       const hasExt = rex && rex > re;
-      // 延長があれば、それが実効的な終了日（進捗100% = 延長終了日）
-      const effEnd    = hasExt ? rex : re;
-      const effEndStr = hasExt ? row.ext : row.end;
-      // 進捗の先端日付：開始〜実効終了 に対する progress% の位置。
-      // これを基準に各月セルを塗るので、月ごとに進捗が繰り返されない。
-      const tip    = new Date(rs.getTime() + (effEnd - rs) * (row.progress / 100));
+      // 第1期間の終わり（延長があれば延長日）
+      const seg1End    = hasExt ? rex : re;
+      const seg1EndStr = hasExt ? row.ext : row.end;
+
+      // 第2期間（間を空けて再参加）
+      const p2  = hasP2(row);
+      const rs2 = p2 ? new Date(row.start2) : null;
+      const re2 = p2 ? new Date(row.end2)   : null;
+
+      // 進捗の先端：開始 〜 最終終了日 に対する progress% の位置。
+      // 全長を基準にするので、月ごとに進捗が繰り返されない。
+      const finalEndStr = p2 ? row.end2 : seg1EndStr;
+      const finalEnd    = new Date(finalEndStr);
+      const tip    = new Date(rs.getTime() + (finalEnd - rs) * (row.progress / 100));
       const tipStr = ymd(tip);
 
       html += '<tr>';
@@ -1111,15 +1176,19 @@ function renderGantt(monthsOverride, forPrint) {
 
       // 工事名セル：種別カラーの左ボーダー。クリックで工期変更タブを開く。
       const memoMark = row.comment ? ' <span style="color:#9a6000;font-size:10px">●</span>' : '';
+      const p2mark   = p2 ? ' <span style="font-size:9px;color:#888">(2期)</span>' : '';
       html += `<td class="col-job ${sep}" style="border-left:3px solid ${color}"
         onclick="openPopTerm(event,${row.id})"
-        title="${escapeHtml(row.name)}（クリックで工期変更）">${escapeHtml(row.name)}${memoMark}</td>`;
+        title="${escapeHtml(row.name)}（クリックで工期変更）">${escapeHtml(row.name)}${p2mark}${memoMark}</td>`;
 
       let commentDone = false;
 
       months.forEach(m => {
-        const mNext    = new Date(m.getFullYear(), m.getMonth() + 1, 1);
-        const overlaps = rs < mNext && effEnd >= m;
+        const mNext = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+        // 第1期間・第2期間・中断期間のいずれかがこの月にかかるか
+        const overlaps = (rs < mNext && seg1End >= m)
+          || (p2 && rs2 < mNext && re2 >= m)
+          || (p2 && seg1End < m && rs2 >= mNext);
 
         const willComment = overlaps && row.comment && !commentDone;
         const cls = ['month-cell', sep, willComment ? 'has-comment' : '']
@@ -1131,7 +1200,7 @@ function renderGantt(monthsOverride, forPrint) {
           html += '<div class="bar-wrap">';
           const tipF = dayFrac(tipStr, m);
 
-          // ---- 本体セグメント（開始〜終了） ----
+          // ---- 第1期間の本体（開始〜終了） ----
           const bodyL = dayFrac(row.start, m);
           const bodyR = dayFrac(row.end,   m);
           const bodyW = bodyR - bodyL;
@@ -1149,7 +1218,6 @@ function renderGantt(monthsOverride, forPrint) {
                 style="left:${bodyL*100}%;width:${bodyW*100}%;border-color:${color};border-radius:${radius}"
                 onclick="openPop(event,${row.id})"></div>`;
             } else {
-              // 進捗の先端までを塗る（セルをまたいで連続する）
               const fillPct = Math.max(0, Math.min(100,
                 ((Math.min(bodyR, tipF) - bodyL) / bodyW) * 100));
               html += `<div class="bar-track"
@@ -1172,7 +1240,6 @@ function renderGantt(monthsOverride, forPrint) {
               html += `<div class="bar-dashed"
                 style="left:${extL*100}%;width:${extW*100}%;border-color:${color};border-radius:${radius};border-left:none"
                 onclick="openPop(event,${row.id})"></div>`;
-              // 延長区間にも進捗が届いていれば、薄く塗る
               if (!dashed && tipF > extL) {
                 const fillW = Math.min(extR, tipF) - extL;
                 html += `<div class="bar-ext-fill"
@@ -1181,14 +1248,60 @@ function renderGantt(monthsOverride, forPrint) {
             }
           }
 
-          // ---- ラベルはバー右端（＝実効終了日）に1回だけ ----
-          const effEndCell = effEnd >= m && effEnd < mNext;
-          if (effEndCell) {
-            const endF = dayFrac(effEndStr, m);
+          // ---- 中断期間の点線（第1期間の終わり 〜 再開日） ----
+          if (p2) {
+            const gapL = dayFrac(seg1EndStr, m);
+            const gapR = dayFrac(row.start2, m);
+            const gapW = gapR - gapL;
+            if (gapW > 0) {
+              html += `<div class="gap-line" style="left:${gapL*100}%;width:${gapW*100}%"></div>`;
+              if (gapW > 0.7) {
+                html += `<div class="gap-label" style="left:${(gapL+gapW/2)*100}%;transform:translateX(-50%)">中断</div>`;
+              }
+            }
+          }
+
+          // ---- 第2期間の本体（再開日〜終了日） ----
+          if (p2) {
+            const b2L = dayFrac(row.start2, m);
+            const b2R = dayFrac(row.end2,   m);
+            const b2W = b2R - b2L;
+            const is2Start = rs2 >= m && rs2 < mNext;
+            const is2End   = re2 >= m && re2 < mNext;
+
+            if (b2W > 0) {
+              const radius = (is2Start && is2End) ? '9px'
+                           : is2Start ? '9px 0 0 9px'
+                           : is2End   ? '0 9px 9px 0' : '0';
+              if (dashed) {
+                html += `<div class="bar-dashed"
+                  style="left:${b2L*100}%;width:${b2W*100}%;border-color:${color};border-radius:${radius}"
+                  onclick="openPop(event,${row.id})"></div>`;
+              } else {
+                const fillPct = Math.max(0, Math.min(100,
+                  ((Math.min(b2R, tipF) - b2L) / b2W) * 100));
+                html += `<div class="bar-track"
+                  style="left:${b2L*100}%;width:${b2W*100}%;background:${light};border-radius:${radius}"
+                  onclick="openPop(event,${row.id})">
+                  <div class="bar-fill" style="width:${fillPct}%;background:${color}"></div>
+                </div>`;
+              }
+            }
+          }
+
+          // ---- ラベルは最終終了日に1回だけ ----
+          const finalEndCell = finalEnd >= m && finalEnd < mNext;
+          if (finalEndCell) {
+            const endF = dayFrac(finalEndStr, m);
             if (!dashed) {
               html += `<div class="bar-pct" style="left:0;width:${endF*100}%;color:${color}">${row.progress}%</div>`;
             }
-            html += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${effEnd.getMonth()+1}/${effEnd.getDate()}${hasExt ? '(延)' : ''}</div>`;
+            html += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${finalEnd.getMonth()+1}/${finalEnd.getDate()}${(hasExt && !p2) ? '(延)' : ''}</div>`;
+          }
+          // 第2期間がある場合は、第1期間の終わりにも日付を薄く出す
+          if (p2 && seg1End >= m && seg1End < mNext) {
+            const f = dayFrac(seg1EndStr, m);
+            html += `<div class="bar-end-date" style="left:${f*100}%;color:${color};opacity:.7">${seg1End.getMonth()+1}/${seg1End.getDate()}</div>`;
           }
 
           if (willComment && bodyW > 0) {
@@ -1249,6 +1362,10 @@ function openPop(e, id) {
   document.getElementById('f-start').value  = r.start;
   document.getElementById('f-end').value    = r.end;
   document.getElementById('f-ext').value    = r.ext || '';
+  document.getElementById('f-start2').value = r.start2 || '';
+  document.getElementById('f-end2').value   = r.end2 || '';
+
+  setP2Open(hasP2(r));   // 第2期間が入っていれば開いた状態で表示
 
   // 管理者は「工事編集」から、監督は「進捗・コメント」から開く
   document.getElementById('tab-term').textContent = isAdmin ? '工事編集' : '工期変更';
@@ -1298,6 +1415,22 @@ function closePop() {
   editId = null;
 }
 
+// 第2期間セクションの開閉
+function setP2Open(open) {
+  document.getElementById('p2-body').classList.toggle('open', open);
+  document.getElementById('p2-toggle').textContent = open ? '− 削除' : '＋ 追加';
+}
+
+function toggleP2() {
+  const body = document.getElementById('p2-body');
+  const willOpen = !body.classList.contains('open');
+  if (!willOpen) {   // 閉じる＝第2期間を消す
+    document.getElementById('f-start2').value = '';
+    document.getElementById('f-end2').value   = '';
+  }
+  setP2Open(willOpen);
+}
+
 function syncVal(v) {
   const r = kojiData.find(x => x.id === editId);
   const el = document.getElementById('pop-val');
@@ -1344,14 +1477,16 @@ async function saveTermPop() {
   const existing = kojiData.find(x => x.id === editId);
   if (!existing) return;
 
-  const start = document.getElementById('f-start').value;
-  const end   = document.getElementById('f-end').value;
-  const ext   = document.getElementById('f-ext').value;
-  if (!start || !end) { alert('開始日・終了日は必須です'); return; }
-  if (start > end)    { alert('開始日は終了日より前にしてください'); return; }
-  if (ext && ext < end) { alert('延長日は終了日より後にしてください'); return; }
+  const start  = document.getElementById('f-start').value;
+  const end    = document.getElementById('f-end').value;
+  const ext    = document.getElementById('f-ext').value;
+  const start2 = document.getElementById('f-start2').value;
+  const end2   = document.getElementById('f-end2').value;
 
-  const entry = { ...existing, start, end, ext };
+  const err = validateTerm(start, end, ext, start2, end2);
+  if (err) { alert(err); return; }
+
+  const entry = { ...existing, start, end, ext, start2, end2 };
   if (isAdmin) {
     entry.person = document.getElementById('f-person').value;
     entry.name   = document.getElementById('f-name').value;
@@ -1372,6 +1507,23 @@ async function saveTermPop() {
   } finally {
     showLoading(false);
   }
+}
+
+// 工期の妥当性チェック。問題なければ null を返す。
+function validateTerm(start, end, ext, start2, end2) {
+  if (!start || !end)   return '開始日・終了日は必須です';
+  if (start > end)      return '開始日は終了日より前にしてください';
+  if (ext && ext < end) return '延長日は終了日より後にしてください';
+
+  if (start2 || end2) {
+    if (!start2 || !end2) return '第2期間は再開日と終了日の両方が必要です';
+    if (start2 > end2)    return '第2期間の再開日は終了日より前にしてください';
+    const prevEnd = (ext && ext > end) ? ext : end;
+    if (start2 <= prevEnd) {
+      return '第2期間の再開日は、第1期間の終了日（延長があれば延長日）より後にしてください';
+    }
+  }
+  return null;
 }
 
 async function delKojiPop() {
@@ -1417,6 +1569,8 @@ function openAddModal(person) {
   document.getElementById('a-start').value  = '';
   document.getElementById('a-end').value    = '';
   document.getElementById('a-ext').value    = '';
+  document.getElementById('a-start2').value = '';
+  document.getElementById('a-end2').value   = '';
   document.getElementById('modal-add').classList.add('open');
 }
 
@@ -1434,14 +1588,14 @@ async function saveAdd() {
     start:    document.getElementById('a-start').value,
     end:      document.getElementById('a-end').value,
     ext:      document.getElementById('a-ext').value,
+    start2:   document.getElementById('a-start2').value,
+    end2:     document.getElementById('a-end2').value,
     progress: 0,
     comment:  '',
   };
-  if (!entry.person || !entry.name || !entry.start || !entry.end) {
-    alert('担当者・工事名・開始日・終了日は必須です'); return;
-  }
-  if (entry.start > entry.end) { alert('開始日は終了日より前にしてください'); return; }
-  if (entry.ext && entry.ext < entry.end) { alert('延長日は終了日より後にしてください'); return; }
+  if (!entry.person || !entry.name) { alert('担当者・工事名は必須です'); return; }
+  const err = validateTerm(entry.start, entry.end, entry.ext, entry.start2, entry.end2);
+  if (err) { alert(err); return; }
 
   showLoading(true);
   try {
@@ -1486,14 +1640,15 @@ function renderProgressOnly() {
       const bg    = TYPE_BG[row.type] || '#f0f0f0';
       const fg    = TYPE_FG[row.type] || '#444';
       const prog  = row.progress || 0;
-      const extTxt = row.ext ? ` → ${fmtDate(row.ext)}（延長）` : '';
+      const extTxt = (row.ext && row.ext > row.end) ? ` → ${fmtDate(row.ext)}（延長）` : '';
+      const p2Txt  = hasP2(row) ? ` ＋ ${fmtDate(row.start2)} 〜 ${fmtDate(row.end2)}（再参加）` : '';
       html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:9px">
         <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:9px">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:700">${escapeHtml(row.name)}</div>
             <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;align-items:center">
               <span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:${bg};color:${fg}">${row.type}</span>
-              <span style="font-size:11px;color:var(--text-sub)">${fmtDate(row.start)} 〜 ${fmtDate(row.end)}${extTxt}</span>
+              <span style="font-size:11px;color:var(--text-sub)">${fmtDate(row.start)} 〜 ${fmtDate(row.end)}${extTxt}${p2Txt}</span>
             </div>
           </div>
           <div style="font-size:22px;font-weight:700;color:${color};white-space:nowrap">${prog}%</div>
