@@ -203,7 +203,7 @@ body {
 .leg-ext {
   width: 20px; height: 10px; border-radius: 5px;
   border: 1.5px solid #767670; flex-shrink: 0; overflow: hidden;
-  background: repeating-linear-gradient(45deg, #767670 0 2px, transparent 2px 5px), #e8e8e2;
+  background: repeating-linear-gradient(45deg, rgba(118,118,112,.35) 0 2px, transparent 2px 5px), #e8e8e2;
 }
 .gantt-wrap {
   overflow-x: auto;
@@ -312,7 +312,9 @@ td.month-cell.has-comment { z-index: 5; }
   cursor: pointer; z-index: 2;
 }
 .bar-ext:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
-.bar-ext-hatch { position: absolute; inset: 0; opacity: .5; }
+/* 延長区間に届いた進捗の塗り（斜線の下に敷く） */
+.bar-ext-fill { position: absolute; top: 0; bottom: 0; left: 0; opacity: .55; }
+.bar-ext-hatch { position: absolute; inset: 0; opacity: .28; }
 /* 中断期間（第1期間の終わり〜再開日）をつなぐ点線 */
 .gap-line {
   position: absolute; top: 50%; height: 0;
@@ -1296,9 +1298,14 @@ function renderGantt(monthsOverride, forPrint) {
 
             if (extW > 0) {
               const radius = extEndCell ? '0 9px 9px 0' : '0';
+              // 延長区間のうち、進捗の先端が届いている割合
+              const extFillPct = (solid && tipF > extL)
+                ? Math.max(0, Math.min(100, ((Math.min(extR, tipF) - extL) / extW) * 100))
+                : 0;
               html += `<div class="bar-ext"
                 style="left:${extL*100}%;width:${extW*100}%;border-color:${color};background:${light};border-radius:${radius}"
                 onclick="openPop(event,${row.id})">
+                ${extFillPct > 0 ? `<div class="bar-ext-fill" style="width:${extFillPct}%;background:${color}"></div>` : ''}
                 <div class="bar-ext-hatch" style="background:${hatchBg(color)}"></div>
               </div>`;
             }
