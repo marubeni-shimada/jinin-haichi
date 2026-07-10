@@ -191,6 +191,20 @@ body {
 .leg-bar-sm { width: 10px; height: 8px; border-radius: 4px; flex-shrink: 0; }
 .leg-dashed { width: 22px; height: 0; border-top: 2px dashed var(--border-hard); }
 .leg-gap { width: 22px; height: 0; border-top: 1.5px dotted #999; }
+/* 凡例の見本 */
+.leg-spot {
+  width: 20px; height: 10px; border-radius: 5px;
+  border: 1.5px dashed #767670; background: #e8e8e2; flex-shrink: 0;
+}
+.leg-plan {
+  width: 20px; height: 10px; border-radius: 5px;
+  border: 1.5px dashed #767670; background: transparent; flex-shrink: 0;
+}
+.leg-ext {
+  width: 20px; height: 10px; border-radius: 5px;
+  border: 1.5px solid #767670; flex-shrink: 0; overflow: hidden;
+  background: repeating-linear-gradient(45deg, #767670 0 2px, transparent 2px 5px), #e8e8e2;
+}
 .gantt-wrap {
   overflow-x: auto;
   max-height: calc(100vh - var(--header-h) - 130px);
@@ -274,18 +288,31 @@ td.month-cell.has-comment { z-index: 5; }
   padding-right: 6px; font-size: 10px; font-weight: 700;
   pointer-events: none; z-index: 3;
 }
-.bar-dashed {
+/* スポット：中を薄く塗る＋破線枠。細くても見えるよう最小幅を保証 */
+.bar-spot {
   position: absolute; top: 50%; transform: translateY(-50%);
   height: 18px; border: 1.5px dashed;
-  cursor: pointer; z-index: 2; background: transparent;
+  cursor: pointer; z-index: 2;
 }
-.bar-dashed:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
-/* 延長区間に届いた進捗の塗り（本体より薄く） */
-.bar-ext-fill {
+.bar-spot:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
+
+/* 予定：破線枠のみ（まだ確定していないことを示す） */
+.bar-plan {
   position: absolute; top: 50%; transform: translateY(-50%);
-  height: 18px; opacity: .40;
-  pointer-events: none; z-index: 1;
+  height: 18px; border: 1.5px dashed; background: transparent;
+  cursor: pointer; z-index: 2;
 }
+.bar-plan:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
+
+/* 延長：ハッチング（斜線）＋実線枠。本来の工期の外であることを示す */
+.bar-ext {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  height: 18px; border: 1.5px solid; border-left: none;
+  overflow: hidden;
+  cursor: pointer; z-index: 2;
+}
+.bar-ext:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
+.bar-ext-hatch { position: absolute; inset: 0; opacity: .5; }
 /* 中断期間（第1期間の終わり〜再開日）をつなぐ点線 */
 .gap-line {
   position: absolute; top: 50%; height: 0;
@@ -519,7 +546,7 @@ body.is-admin .btn-del { display: block; }
   td.month-cell { min-width: 0 !important; width: auto !important; }
 
   .bar-wrap { height: 56px !important; }
-  .bar-track, .bar-dashed, .bar-ext-fill, .bar-pct {
+  .bar-track, .bar-spot, .bar-plan, .bar-ext, .bar-pct {
     height: 12px !important;
     top: 50% !important; transform: translateY(-50%) !important;
   }
@@ -616,7 +643,9 @@ body.is-admin .btn-del { display: block; }
       <div class="leg-bar" style="background:#f7e3e3"></div>薄=工期 /
       <div class="leg-bar-sm" style="background:#c93535"></div>濃=進捗
     </div>
-    <div class="leg"><div class="leg-dashed"></div>スポット / 予定 / 延長</div>
+    <div class="leg"><div class="leg-spot"></div>スポット</div>
+    <div class="leg"><div class="leg-ext"></div>延長</div>
+    <div class="leg"><div class="leg-plan"></div>予定</div>
     <div class="leg"><div class="leg-gap"></div>中断（参加なし）</div>
   </div>
   <div id="print-area">
@@ -629,7 +658,9 @@ body.is-admin .btn-del { display: block; }
         <div class="leg"><div class="leg-bar" style="background:#c93535"></div>元請</div>
         <div class="leg"><div class="leg-bar" style="background:#1c8050"></div>民間</div>
         <div class="leg"><div class="leg-bar" style="background:#2055a0"></div>予定</div>
-        <div class="leg"><div class="leg-dashed"></div>スポット / 予定 / 延長</div>
+        <div class="leg"><div class="leg-spot"></div>スポット</div>
+        <div class="leg"><div class="leg-ext"></div>延長</div>
+        <div class="leg"><div class="leg-plan"></div>予定</div>
         <div class="leg"><div class="leg-gap"></div>中断</div>
       </div>
       <div class="gantt-wrap">
@@ -820,8 +851,8 @@ body.is-admin .btn-del { display: block; }
 'use strict';
 
 /* =========================================================
-   GAS Web App URL をここに直接書き込む（全員が設定不要で使える）
-   例: 'https://script.google.com/macros/s/AKfycb.../exec'
+   GAS Web App URL（全員が設定不要で使えるよう直書き）
+   デプロイし直してURLが変わったら、ここを書き換える
    ========================================================= */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzuJiPicW9YWHyC9BA2FSur4BsWk6o3fqWqiDhAzBwdVr98K9VPAMiYEM8p0j5vkoI/exec';
 
@@ -1066,8 +1097,26 @@ function dayFrac(dateStr, m) {
   return (d - m0) / (m1 - m0);
 }
 
-function useDashedBar(row) {
-  return row.config === 'スポット' || row.type === '予定';
+function isSpot(row) { return row.config === 'スポット'; }
+function isPlan(row) { return row.type === '予定'; }
+// 塗りバー（進捗の濃淡）を使うのは、スポットでも予定でもない通常の常駐工事
+function useSolidBar(row) { return !isSpot(row) && !isPlan(row); }
+
+// 細すぎるバーは見えないので、セル幅の MIN_BAR_W まで広げる。
+// 中心を保ったまま左右に広げ、セルからはみ出さないよう収める。
+const MIN_BAR_W = 0.12;
+function widen(left, right) {
+  let w = right - left;
+  if (w >= MIN_BAR_W) return { left, width: w };
+  const center = (left + right) / 2;
+  let l = center - MIN_BAR_W / 2;
+  l = Math.max(0, Math.min(l, 1 - MIN_BAR_W));
+  return { left: l, width: Math.min(MIN_BAR_W, 1 - l) };
+}
+
+// 延長区間のハッチング（斜線）パターン
+function hatchBg(color) {
+  return `repeating-linear-gradient(45deg, ${color} 0 2px, transparent 2px 5px)`;
 }
 
 /* ---------- ガント描画 ---------- */
@@ -1147,7 +1196,9 @@ function renderGantt(monthsOverride, forPrint) {
       const sep       = isLastRow && !isLastGroup ? 'sep' : '';
       const color     = COLOR[row.type] || '#888';
       const light     = LIGHT[row.type] || '#eee';
-      const dashed    = useDashedBar(row);
+      const spot      = isSpot(row);
+      const plan      = isPlan(row);
+      const solid     = useSolidBar(row);
 
       const rs     = new Date(row.start);
       const re     = new Date(row.end);
@@ -1213,8 +1264,16 @@ function renderGantt(monthsOverride, forPrint) {
             const radius = (isStartCell && roundR) ? '9px'
                          : isStartCell ? '9px 0 0 9px'
                          : roundR      ? '0 9px 9px 0' : '0';
-            if (dashed) {
-              html += `<div class="bar-dashed"
+
+            if (spot) {
+              // スポット：中を薄く塗る＋破線枠。細すぎたら最小幅まで広げる
+              const w = widen(bodyL, bodyR);
+              html += `<div class="bar-spot"
+                style="left:${w.left*100}%;width:${w.width*100}%;border-color:${color};background:${light};border-radius:9px"
+                onclick="openPop(event,${row.id})"></div>`;
+            } else if (plan) {
+              // 予定：破線枠のみ（未確定）
+              html += `<div class="bar-plan"
                 style="left:${bodyL*100}%;width:${bodyW*100}%;border-color:${color};border-radius:${radius}"
                 onclick="openPop(event,${row.id})"></div>`;
             } else {
@@ -1228,7 +1287,7 @@ function renderGantt(monthsOverride, forPrint) {
             }
           }
 
-          // ---- 延長セグメント（終了〜延長日）。常に破線 ----
+          // ---- 延長セグメント（終了〜延長日）。ハッチング＋実線枠 ----
           if (hasExt) {
             const extL = dayFrac(row.end, m);
             const extR = dayFrac(row.ext, m);
@@ -1237,14 +1296,11 @@ function renderGantt(monthsOverride, forPrint) {
 
             if (extW > 0) {
               const radius = extEndCell ? '0 9px 9px 0' : '0';
-              html += `<div class="bar-dashed"
-                style="left:${extL*100}%;width:${extW*100}%;border-color:${color};border-radius:${radius};border-left:none"
-                onclick="openPop(event,${row.id})"></div>`;
-              if (!dashed && tipF > extL) {
-                const fillW = Math.min(extR, tipF) - extL;
-                html += `<div class="bar-ext-fill"
-                  style="left:${extL*100}%;width:${fillW*100}%;background:${color}"></div>`;
-              }
+              html += `<div class="bar-ext"
+                style="left:${extL*100}%;width:${extW*100}%;border-color:${color};background:${light};border-radius:${radius}"
+                onclick="openPop(event,${row.id})">
+                <div class="bar-ext-hatch" style="background:${hatchBg(color)}"></div>
+              </div>`;
             }
           }
 
@@ -1273,8 +1329,13 @@ function renderGantt(monthsOverride, forPrint) {
               const radius = (is2Start && is2End) ? '9px'
                            : is2Start ? '9px 0 0 9px'
                            : is2End   ? '0 9px 9px 0' : '0';
-              if (dashed) {
-                html += `<div class="bar-dashed"
+              if (spot) {
+                const w = widen(b2L, b2R);
+                html += `<div class="bar-spot"
+                  style="left:${w.left*100}%;width:${w.width*100}%;border-color:${color};background:${light};border-radius:9px"
+                  onclick="openPop(event,${row.id})"></div>`;
+              } else if (plan) {
+                html += `<div class="bar-plan"
                   style="left:${b2L*100}%;width:${b2W*100}%;border-color:${color};border-radius:${radius}"
                   onclick="openPop(event,${row.id})"></div>`;
               } else {
@@ -1293,7 +1354,7 @@ function renderGantt(monthsOverride, forPrint) {
           const finalEndCell = finalEnd >= m && finalEnd < mNext;
           if (finalEndCell) {
             const endF = dayFrac(finalEndStr, m);
-            if (!dashed) {
+            if (solid) {
               html += `<div class="bar-pct" style="left:0;width:${endF*100}%;color:${color}">${row.progress}%</div>`;
             }
             html += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${finalEnd.getMonth()+1}/${finalEnd.getDate()}${(hasExt && !p2) ? '(延)' : ''}</div>`;
