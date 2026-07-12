@@ -1121,6 +1121,15 @@ function hatchBg(color) {
   return `repeating-linear-gradient(45deg, ${color} 0 2px, transparent 2px 5px)`;
 }
 
+// スポットバーの角丸を出し分け（開始セル=左だけ丸、終了セル=右だけ丸、通過セル=角丸なし）。
+// これで月をまたいでも1本の連続したバーに見える。
+function spotRadius(isStartCell, isEndCell) {
+  if (isStartCell && isEndCell) return 'border-radius:9px;';
+  if (isStartCell)              return 'border-radius:9px 0 0 9px;';
+  if (isEndCell)                return 'border-radius:0 9px 9px 0;';
+  return 'border-radius:0;';
+}
+
 /* ---------- ガント描画 ---------- */
 
 function renderGantt(monthsOverride, forPrint) {
@@ -1268,10 +1277,14 @@ function renderGantt(monthsOverride, forPrint) {
                          : roundR      ? '0 9px 9px 0' : '0';
 
             if (spot) {
-              // スポット：中を薄く塗る＋破線枠。細すぎたら最小幅まで広げる
-              const w = widen(bodyL, bodyR);
+              // スポット：中を薄く塗る＋破線枠。
+              // 月をまたぐ場合は連続バーとして角丸を出し分け（開始セル=左、終了セル=右）。
+              // 単月内で細い場合だけ最小幅を効かせる。
+              const singleCell = isStartCell && isEndCell;
+              const sRad = spotRadius(isStartCell, isEndCell);
+              const seg  = singleCell ? widen(bodyL, bodyR) : { left: bodyL, width: bodyW };
               html += `<div class="bar-spot"
-                style="left:${w.left*100}%;width:${w.width*100}%;border-color:${color};background:${light};border-radius:9px"
+                style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:${color};background:${light};${sRad}${!isStartCell ? 'border-left:none;' : ''}${!isEndCell ? 'border-right:none;' : ''}"
                 onclick="openPop(event,${row.id})"></div>`;
             } else if (plan) {
               // 予定：破線枠のみ（未確定）
@@ -1337,9 +1350,11 @@ function renderGantt(monthsOverride, forPrint) {
                            : is2Start ? '9px 0 0 9px'
                            : is2End   ? '0 9px 9px 0' : '0';
               if (spot) {
-                const w = widen(b2L, b2R);
+                const singleCell = is2Start && is2End;
+                const sRad = spotRadius(is2Start, is2End);
+                const seg  = singleCell ? widen(b2L, b2R) : { left: b2L, width: b2W };
                 html += `<div class="bar-spot"
-                  style="left:${w.left*100}%;width:${w.width*100}%;border-color:${color};background:${light};border-radius:9px"
+                  style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:${color};background:${light};${sRad}${!is2Start ? 'border-left:none;' : ''}${!is2End ? 'border-right:none;' : ''}"
                   onclick="openPop(event,${row.id})"></div>`;
               } else if (plan) {
                 html += `<div class="bar-plan"
