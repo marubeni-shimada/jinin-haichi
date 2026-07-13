@@ -538,7 +538,7 @@ body.is-admin .btn-del { display: block; }
     border: none !important;
     border-radius: 0 !important;
   }
-  table.gantt { min-width: 0 !important; width: auto !important; border: 1.5px solid #777 !important; margin: 0 auto !important; }
+  table.gantt { min-width: 0 !important; width: auto !important; border: 1.5px solid #777 !important; }
   table.gantt thead { display: table-header-group; }
   table.gantt tr { page-break-inside: avoid; }
   table.gantt tbody td { border-bottom: none !important; }
@@ -1860,25 +1860,42 @@ function printGantt() {
   const page  = document.getElementById('page-gantt');
   const scale = document.getElementById('print-scale');
   page.classList.add('print-mode');
-  scale.style.zoom = '';
+  resetPrintScale();
 
   const table = document.querySelector('#gantt-container table');
   // A4横・余白7mm での印刷可能領域（px相当）。横 ≒ 283mm, 縦 ≒ 196mm。
-  const PAGE_W = 1080;   // 横方向
-  const PAGE_H = 760;    // 縦方向（ヘッダ・凡例ぶんは tH 側で加算）
+  const PAGE_W = 1080;
+  const PAGE_H = 760;
   const tW = table ? table.offsetWidth  : 0;
   const tH = (table ? table.offsetHeight : 0) + 70;
-  // 縦・横の両方に収まる倍率（小さいほうに合わせる）。ページを埋めるため拡大も許容。
   let s = Math.min(PAGE_W / tW, PAGE_H / tH) * 0.98;
-  s = Math.max(0.4, Math.min(s, 1.6));   // 極端な拡大縮小は抑える
-  scale.style.zoom = String(s);
+  s = Math.max(0.4, Math.min(s, 1.6));
+
+  // zoom は Edge の印刷でページ割れ・位置ずれを起こすので transform:scale を使う。
+  // transform は元サイズぶんの領域を占有し続けるため、縮小後の高さぶんに親を補正する。
+  scale.style.transformOrigin = 'top left';
+  scale.style.transform = `scale(${s})`;
+  const box = document.getElementById('print-scale');
+  const naturalH = box.scrollHeight;          // 変形前の実高さ
+  box.style.height = (naturalH * s) + 'px';    // 縮小後の高さぶんだけ場所を取る
+  box.style.overflow = 'hidden';
 
   window.print();
 }
 
+function resetPrintScale() {
+  const scale = document.getElementById('print-scale');
+  scale.style.transform = '';
+  scale.style.transformOrigin = '';
+  scale.style.width = '';
+  scale.style.height = '';
+  scale.style.overflow = '';
+  scale.style.zoom = '';
+}
+
 window.addEventListener('afterprint', () => {
   document.getElementById('page-gantt').classList.remove('print-mode');
-  document.getElementById('print-scale').style.zoom = '';
+  resetPrintScale();
   renderGantt();
 });
 </script>
