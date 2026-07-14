@@ -250,6 +250,21 @@ table.gantt tbody td.col-job {
   cursor: pointer;
 }
 table.gantt tbody td.col-job:hover { background: #fffbe0; }
+
+/* 進捗列 */
+table.gantt thead th.col-prog { min-width: 54px; width: 54px; }
+table.gantt tbody td.col-prog {
+  border-right: 2px solid var(--border-hard);
+  padding: 4px 6px; text-align: center; vertical-align: middle;
+  cursor: pointer;
+}
+table.gantt tbody td.col-prog:hover { background: #fffbe0; }
+.prog-num { font-size: 13px; font-weight: 700; line-height: 1.1; }
+.prog-gauge {
+  height: 4px; border-radius: 2px; background: rgba(0,0,0,.10);
+  overflow: hidden; margin-top: 4px;
+}
+.prog-gauge-fill { height: 100%; border-radius: 2px; }
 table.gantt tbody td.sep { border-bottom: 2px solid var(--border-hard); }
 .add-koji-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -281,13 +296,6 @@ td.month-cell.has-comment { z-index: 5; }
   transition: box-shadow .12s;
 }
 .bar-track:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.18); }
-.bar-fill { height: 100%; }
-.bar-pct {
-  position: absolute; top: 50%; transform: translateY(-50%);
-  height: 18px; display: flex; align-items: center; justify-content: flex-end;
-  padding-right: 6px; font-size: 10px; font-weight: 700;
-  pointer-events: none; z-index: 3;
-}
 /* スポット：中を薄く塗る＋破線枠。細くても見えるよう最小幅を保証 */
 .bar-spot {
   position: absolute; top: 50%; transform: translateY(-50%);
@@ -312,8 +320,6 @@ td.month-cell.has-comment { z-index: 5; }
   cursor: pointer; z-index: 2;
 }
 .bar-ext:hover { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
-/* 延長区間に届いた進捗の塗り（斜線の下に敷く） */
-.bar-ext-fill { position: absolute; top: 0; bottom: 0; left: 0; opacity: .55; }
 .bar-ext-hatch { position: absolute; inset: 0; opacity: .28; }
 /* 中断期間（第1期間の終わり〜再開日）をつなぐ点線 */
 .gap-line {
@@ -548,7 +554,7 @@ body.is-admin .btn-del { display: block; }
   td.month-cell { min-width: 0 !important; width: auto !important; }
 
   .bar-wrap { height: 56px !important; }
-  .bar-track, .bar-spot, .bar-plan, .bar-ext, .bar-pct {
+  .bar-track, .bar-spot, .bar-plan, .bar-ext {
     height: 12px !important;
     top: 50% !important; transform: translateY(-50%) !important;
   }
@@ -561,7 +567,11 @@ body.is-admin .btn-del { display: block; }
     color: #111 !important; font-size: 12px !important; font-weight: 700 !important;
     opacity: 1 !important;
   }
-  .bar-pct { font-size: 11px !important; }
+  /* 進捗列は印刷でも細く維持 */
+  table.gantt th.col-prog, table.gantt td.col-prog {
+    width: 46px !important; min-width: 46px !important;
+  }
+  .prog-num { font-size: 12px !important; }
   .bar-comment {
     top: 7px !important; font-size: 12px !important;
     color: #111 !important; font-weight: 700 !important;
@@ -1173,6 +1183,7 @@ function renderGantt(monthsOverride, forPrint) {
   let html = '<table class="gantt"><thead><tr>';
   html += '<th class="col-name">担当者</th>';
   html += '<th class="col-job">工事名</th>';
+  html += '<th class="col-prog">進捗</th>';
   months.forEach(m => {
     const isNow = m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth();
     html += `<th style="${isNow ? 'color:var(--red);font-weight:700' : ''}">${m.getMonth() + 1}月</th>`;
@@ -1181,7 +1192,7 @@ function renderGantt(monthsOverride, forPrint) {
 
   const persons = Object.keys(groups);
   if (!persons.length) {
-    html += `<tr><td colspan="${2 + months.length}"><div class="empty">データがありません</div></td></tr>`;
+    html += `<tr><td colspan="${3 + months.length}"><div class="empty">データがありません</div></td></tr>`;
   }
 
   persons.forEach((person, pi) => {
@@ -1197,6 +1208,7 @@ function renderGantt(monthsOverride, forPrint) {
       html += '<tr>';
       html += `<td class="col-name ${nameSep}">${escapeHtml(person)}${addBtn}</td>`;
       html += `<td class="col-job ${nameSep}"></td>`;
+      html += `<td class="col-prog ${nameSep}" style="cursor:default"></td>`;
       months.forEach(() => { html += `<td class="month-cell ${nameSep}"></td>`; });
       html += '</tr>';
       return;
@@ -1242,6 +1254,14 @@ function renderGantt(monthsOverride, forPrint) {
       html += `<td class="col-job ${sep}" style="border-left:3px solid ${color}"
         onclick="openPopTerm(event,${row.id})"
         title="${escapeHtml(row.name)}（クリックで工期変更）">${escapeHtml(row.name)}${p2mark}${memoMark}</td>`;
+
+      // 進捗列：数字＋小ゲージ。クリックで進捗・コメント入力を開く。
+      html += `<td class="col-prog ${sep}"
+        onclick="openPopProg(event,${row.id})"
+        title="クリックで進捗・コメント入力">
+        <div class="prog-num" style="color:${color}">${row.progress}%</div>
+        <div class="prog-gauge"><div class="prog-gauge-fill" style="width:${row.progress}%;background:${color}"></div></div>
+      </td>`;
 
       let commentDone = false;
 
@@ -1292,13 +1312,10 @@ function renderGantt(monthsOverride, forPrint) {
                 style="left:${bodyL*100}%;width:${bodyW*100}%;border-color:${color};border-radius:${radius}"
                 onclick="openPop(event,${row.id})"></div>`;
             } else {
-              const fillPct = Math.max(0, Math.min(100,
-                ((Math.min(bodyR, tipF) - bodyL) / bodyW) * 100));
+              // 常駐：工期ぶんを満タンに塗る（進捗は進捗列で表示）
               html += `<div class="bar-track"
-                style="left:${bodyL*100}%;width:${bodyW*100}%;background:${light};border-radius:${radius}"
-                onclick="openPop(event,${row.id})">
-                <div class="bar-fill" style="width:${fillPct}%;background:${color}"></div>
-              </div>`;
+                style="left:${bodyL*100}%;width:${bodyW*100}%;background:${color};border-radius:${radius}"
+                onclick="openPop(event,${row.id})"></div>`;
             }
           }
 
@@ -1311,14 +1328,9 @@ function renderGantt(monthsOverride, forPrint) {
 
             if (extW > 0) {
               const radius = extEndCell ? '0 9px 9px 0' : '0';
-              // 延長区間のうち、進捗の先端が届いている割合
-              const extFillPct = (solid && tipF > extL)
-                ? Math.max(0, Math.min(100, ((Math.min(extR, tipF) - extL) / extW) * 100))
-                : 0;
               html += `<div class="bar-ext"
                 style="left:${extL*100}%;width:${extW*100}%;border-color:${color};background:${light};border-radius:${radius}"
                 onclick="openPop(event,${row.id})">
-                ${extFillPct > 0 ? `<div class="bar-ext-fill" style="width:${extFillPct}%;background:${color}"></div>` : ''}
                 <div class="bar-ext-hatch" style="background:${hatchBg(color)}"></div>
               </div>`;
             }
@@ -1361,24 +1373,18 @@ function renderGantt(monthsOverride, forPrint) {
                   style="left:${b2L*100}%;width:${b2W*100}%;border-color:${color};border-radius:${radius}"
                   onclick="openPop(event,${row.id})"></div>`;
               } else {
-                const fillPct = Math.max(0, Math.min(100,
-                  ((Math.min(b2R, tipF) - b2L) / b2W) * 100));
+                // 常駐：工期ぶんを満タンに塗る
                 html += `<div class="bar-track"
-                  style="left:${b2L*100}%;width:${b2W*100}%;background:${light};border-radius:${radius}"
-                  onclick="openPop(event,${row.id})">
-                  <div class="bar-fill" style="width:${fillPct}%;background:${color}"></div>
-                </div>`;
+                  style="left:${b2L*100}%;width:${b2W*100}%;background:${color};border-radius:${radius}"
+                  onclick="openPop(event,${row.id})"></div>`;
               }
             }
           }
 
-          // ---- ラベルは最終終了日に1回だけ ----
+          // ---- 終了日ラベルを最終終了日に1回だけ ----
           const finalEndCell = finalEnd >= m && finalEnd < mNext;
           if (finalEndCell) {
             const endF = dayFrac(finalEndStr, m);
-            if (solid) {
-              html += `<div class="bar-pct" style="left:0;width:${endF*100}%;color:${color}">${row.progress}%</div>`;
-            }
             html += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${finalEnd.getMonth()+1}/${finalEnd.getDate()}${(hasExt && !p2) ? '(延)' : ''}</div>`;
           }
           // 第2期間がある場合は、第1期間の終わりにも日付を薄く出す
@@ -1483,6 +1489,12 @@ function openPop(e, id) {
 function openPopTerm(e, id) {
   openPop(e, id);
   switchPopTab('term');
+}
+
+// 進捗列から開く場合は進捗・コメントタブ
+function openPopProg(e, id) {
+  openPop(e, id);
+  switchPopTab('prog');
 }
 
 function switchPopTab(t) {
