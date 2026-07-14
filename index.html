@@ -516,15 +516,8 @@ body.is-admin .btn-del { display: block; }
 }
 .print-legend { display: none; }
 
-/* transform縮小の二層構造。#print-area が縮小後の領域を確保し、
-   #print-scale を scale() で縮小する。zoomを使わないのでEdgeでも安定する。 */
-#print-area { position: relative; }
-#print-scale { transform-origin: top left; }
-/* 印刷フィット計測のあいだだけ、印刷専用のヘッダ・凡例を画面にも表示して正確に測る */
-.print-mode .print-legend { display: flex !important; font-size: 11px; margin: 2px 0 8px; }
-
 @media print {
-  @page { size: A4 landscape; margin: 8mm; }
+  @page { size: A4 portrait; margin: 8mm; }
   html, body { background: #fff !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
@@ -1864,46 +1857,24 @@ function printGantt() {
   // 年度（4月始まり）の12ヶ月で再描画してから印刷
   renderGantt(getFiscalMonths(), true);
 
+  // 印刷時の高さを画面に反映（.print-mode）→ 実測 → A4縦1ページに収まるよう縮小
   const page  = document.getElementById('page-gantt');
-  const area  = document.getElementById('print-area');
   const scale = document.getElementById('print-scale');
-  const phead = document.getElementById('print-header');
   page.classList.add('print-mode');
-  phead.style.display = 'flex';   // 計測のあいだヘッダも表示（印刷時と同じ高さにする）
-  resetPrintScale();
+  scale.style.zoom = '';
 
-  // 高さだけで縮小率を決める（横はテーブルの width:100% がページ幅に合わせる）。
-  // ヘッダ・凡例も表示した状態で測るので、印刷時の実高さと一致する。
-  const total  = scale.offsetHeight;
-  const PAGE_H = 690;                               // A4横・余白8mm の印刷可能高さ(px相当)
-  let s = Math.min(1, PAGE_H / total) * 0.98;
-  s = Math.max(0.3, s);
-
-  // zoom の代わりに transform:scale を使う（Edgeの印刷でも同じ結果になる）。
-  // 縮小してもページ幅いっぱいに残るよう、まず幅を 100/s% に広げてから scale(s) で戻す。
-  scale.style.width     = (100 / s) + '%';
-  scale.style.transform = `scale(${s})`;
-  // 幅を広げた後の実高さを測り直し、縮小後の高さぶんだけ #print-area に確保する。
-  const realH = scale.offsetHeight;
-  area.style.height = (realH * s) + 'px';
+  const table  = document.querySelector('#gantt-container table');
+  const PAGE_H = 1060;                             // A4縦・余白8mmでの印刷可能高さ(px相当)
+  const total  = (table ? table.offsetHeight : 0) + 90;  // ＋印刷ヘッダ・凡例
+  const s = Math.min(1, PAGE_H / total) * 0.97;
+  scale.style.zoom = String(s);
 
   window.print();
 }
 
-function resetPrintScale() {
-  const area  = document.getElementById('print-area');
-  const scale = document.getElementById('print-scale');
-  scale.style.transform = '';
-  scale.style.width     = '';
-  scale.style.zoom      = '';
-  area.style.height     = '';
-  area.style.overflow   = '';
-}
-
 window.addEventListener('afterprint', () => {
   document.getElementById('page-gantt').classList.remove('print-mode');
-  document.getElementById('print-header').style.display = 'none';
-  resetPrintScale();
+  document.getElementById('print-scale').style.zoom = '';
   renderGantt();
 });
 </script>
