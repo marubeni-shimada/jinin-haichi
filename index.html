@@ -520,6 +520,8 @@ body.is-admin .btn-del { display: block; }
    #print-scale を scale() で縮小する。zoomを使わないのでEdgeでも安定する。 */
 #print-area { position: relative; }
 #print-scale { transform-origin: top left; }
+/* 印刷フィット計測のあいだだけ、印刷専用のヘッダ・凡例を画面にも表示して正確に測る */
+.print-mode .print-legend { display: flex !important; font-size: 11px; margin: 2px 0 8px; }
 
 @media print {
   @page { size: A4 landscape; margin: 8mm; }
@@ -1865,24 +1867,25 @@ function printGantt() {
   const page  = document.getElementById('page-gantt');
   const area  = document.getElementById('print-area');
   const scale = document.getElementById('print-scale');
+  const phead = document.getElementById('print-header');
   page.classList.add('print-mode');
+  phead.style.display = 'flex';   // 計測のあいだヘッダも表示（印刷時と同じ高さにする）
   resetPrintScale();
 
   // 高さだけで縮小率を決める（横はテーブルの width:100% がページ幅に合わせる）。
-  // これは以前 zoom で動いていたロジックと同じ考え方。
-  // 印刷ヘッダ・凡例は画面では非表示なので、その高さぶん(約85px)を加算して実測を補う。
-  const total  = scale.offsetHeight + 85;
+  // ヘッダ・凡例も表示した状態で測るので、印刷時の実高さと一致する。
+  const total  = scale.offsetHeight;
   const PAGE_H = 690;                               // A4横・余白8mm の印刷可能高さ(px相当)
   let s = Math.min(1, PAGE_H / total) * 0.98;
   s = Math.max(0.3, s);
 
   // zoom の代わりに transform:scale を使う（Edgeの印刷でも同じ結果になる）。
   // 縮小してもページ幅いっぱいに残るよう、まず幅を 100/s% に広げてから scale(s) で戻す。
-  // 縮小後の高さぶんだけ #print-area に持たせ、はみ出しを隠して2ページ目への流出を防ぐ。
   scale.style.width     = (100 / s) + '%';
   scale.style.transform = `scale(${s})`;
-  area.style.height     = (total * s) + 'px';
-  area.style.overflow   = 'hidden';
+  // 幅を広げた後の実高さを測り直し、縮小後の高さぶんだけ #print-area に確保する。
+  const realH = scale.offsetHeight;
+  area.style.height = (realH * s) + 'px';
 
   window.print();
 }
@@ -1899,6 +1902,7 @@ function resetPrintScale() {
 
 window.addEventListener('afterprint', () => {
   document.getElementById('page-gantt').classList.remove('print-mode');
+  document.getElementById('print-header').style.display = 'none';
   resetPrintScale();
   renderGantt();
 });
