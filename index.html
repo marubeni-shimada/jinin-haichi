@@ -194,7 +194,7 @@ body {
 /* 凡例の見本 */
 .leg-spot {
   width: 20px; height: 10px; border-radius: 5px;
-  border: 1.5px dashed #767670; background: #e8e8e2; flex-shrink: 0;
+  border: 1.5px dashed rgba(255,255,255,.9); background: #767670; flex-shrink: 0;
 }
 .leg-plan {
   width: 20px; height: 10px; border-radius: 5px;
@@ -1297,14 +1297,13 @@ function renderGantt(monthsOverride, forPrint) {
                          : roundR      ? '0 9px 9px 0' : '0';
 
             if (spot) {
-              // スポット：中を薄く塗る＋破線枠。
-              // 月をまたぐ場合は連続バーとして角丸を出し分け（開始セル=左、終了セル=右）。
-              // 単月内で細い場合だけ最小幅を効かせる。
+              // スポット：濃い色で満タン塗り＋破線枠。常駐との違いは破線で残す。
+              // 月をまたぐ場合は連続バーとして角丸を出し分け、単月内で細い場合だけ最小幅。
               const singleCell = isStartCell && isEndCell;
               const sRad = spotRadius(isStartCell, isEndCell);
               const seg  = singleCell ? widen(bodyL, bodyR) : { left: bodyL, width: bodyW };
               html += `<div class="bar-spot"
-                style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:${color};background:${light};${sRad}${!isStartCell ? 'border-left:none;' : ''}${!isEndCell ? 'border-right:none;' : ''}"
+                style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:rgba(255,255,255,.9);background:${color};${sRad}${!isStartCell ? 'border-left:none;' : ''}${!isEndCell ? 'border-right:none;' : ''}"
                 onclick="openPop(event,${row.id})"></div>`;
             } else if (plan) {
               // 予定：破線枠のみ（未確定）
@@ -1366,7 +1365,7 @@ function renderGantt(monthsOverride, forPrint) {
                 const sRad = spotRadius(is2Start, is2End);
                 const seg  = singleCell ? widen(b2L, b2R) : { left: b2L, width: b2W };
                 html += `<div class="bar-spot"
-                  style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:${color};background:${light};${sRad}${!is2Start ? 'border-left:none;' : ''}${!is2End ? 'border-right:none;' : ''}"
+                  style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:rgba(255,255,255,.9);background:${color};${sRad}${!is2Start ? 'border-left:none;' : ''}${!is2End ? 'border-right:none;' : ''}"
                   onclick="openPop(event,${row.id})"></div>`;
               } else if (plan) {
                 html += `<div class="bar-plan"
