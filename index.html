@@ -1158,15 +1158,20 @@ function renderGantt(monthsOverride, forPrint) {
   });
   sel.value = prev;
 
-  // 最終終了日（第2期間があればその終了日、なければ延長／終了日）が
-  // 「当月1日」より前の工事だけ非表示。→ 当月内なら月末まで表示。
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const isFinished = r => {
-    const eff = finalEndStrOf(r);
-    if (!eff) return false;
-    return new Date(eff) < monthStart;
+  // 表示中の月レンジにバーが重なる工事だけ表示する。
+  // 「終わったら消す」ではなく「見えている範囲にあるものを出す」方式。
+  // 画面（先月始まり）には8月末終了の工事も残り、印刷（今月始まり）には空行が出ない。
+  const rangeStart = months[0];
+  const lastM      = months[months.length - 1];
+  const rangeEnd   = new Date(lastM.getFullYear(), lastM.getMonth() + 1, 1);
+  const inRange = r => {
+    if (!r.start) return false;
+    const rs  = new Date(r.start);
+    const eff = finalEndStrOf(r) || r.end || r.start;
+    const re  = new Date(eff);
+    return rs < rangeEnd && re >= rangeStart;   // レンジに少しでも重なれば表示
   };
-  const active = kojiData.filter(r => !isFinished(r));
+  const active = kojiData.filter(inRange);
   const rows   = fp ? active.filter(r => r.person === fp) : active;
 
   const groups = {};
