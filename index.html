@@ -175,6 +175,19 @@ body {
   margin-bottom: 12px;
 }
 .toolbar label { font-size: 11px; color: var(--text-sub); }
+/* 表示切替トグル（担当者別/工事別） */
+.view-toggle {
+  display: inline-flex; border: 1px solid var(--border-hard);
+  border-radius: var(--r); overflow: hidden;
+}
+.view-btn {
+  border: none; background: var(--surface); color: var(--text-sub);
+  font-size: 12px; font-family: inherit; font-weight: 600;
+  padding: 6px 14px; cursor: pointer;
+}
+.view-btn + .view-btn { border-left: 1px solid var(--border-hard); }
+.view-btn.active { background: var(--blue); color: #fff; }
+.view-btn:not(.active):hover { background: var(--surface2); }
 .toolbar select {
   padding: 5px 10px;
   border: 1px solid var(--border-hard);
@@ -654,11 +667,10 @@ body.is-admin .btn-del { display: block; }
 
 <div id="page-gantt" class="page active">
   <div class="toolbar">
-    <label>表示</label>
-    <select id="sel-view" onchange="renderGantt()">
-      <option value="person" selected>担当者別</option>
-      <option value="koji">工事別</option>
-    </select>
+    <div class="view-toggle">
+      <button type="button" class="view-btn active" id="view-person" onclick="setView('person')">担当者別</button>
+      <button type="button" class="view-btn" id="view-koji" onclick="setView('koji')">工事別</button>
+    </div>
     <label>表示期間</label>
     <select id="sel-range" onchange="renderGantt()">
       <option value="3">3ヶ月</option>
@@ -907,6 +919,7 @@ let ADMIN_PW   = localStorage.getItem('adminPw') || DEFAULT_PW;
 let isAdmin    = false;
 let pendingTab = null;
 let editId     = null;   // パネルで編集中の工事ID
+let currentView = 'person';   // 'person'=担当者別 / 'koji'=工事別
 
 let masters     = [];
 let kojiMasters = [];
@@ -1254,6 +1267,14 @@ function spotRadius(isStartCell, isEndCell) {
 
 /* ---------- ガント描画 ---------- */
 
+// 表示モード切替（担当者別 / 工事別）
+function setView(v) {
+  currentView = v;
+  document.getElementById('view-person').classList.toggle('active', v === 'person');
+  document.getElementById('view-koji').classList.toggle('active', v === 'koji');
+  renderGantt();
+}
+
 function renderGantt(monthsOverride, forPrint) {
   const n      = parseInt(document.getElementById('sel-range').value);
   const fp     = document.getElementById('sel-person').value;
@@ -1286,7 +1307,7 @@ function renderGantt(monthsOverride, forPrint) {
   const active = kojiData.filter(inRange);
   const rows   = fp ? active.filter(r => r.person === fp) : active;
 
-  const view = (document.getElementById('sel-view') || {}).value || 'person';
+  const view = currentView;
 
   // ---- 1行ぶんの月セル（バー）HTMLを返す共通関数 ----
   function barCellsHtml(row, sep) {
