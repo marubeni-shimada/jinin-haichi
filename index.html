@@ -932,12 +932,23 @@ function fmtDate(s) {
 
 // yyyy-MM-dd の翌日を返す（中断の「終了日の翌日から再開」用）
 function addDay(dateStr) {
-  const d = new Date(dateStr);
+  const d = parseLocal(dateStr);
   d.setDate(d.getDate() + 1);
   const y  = d.getFullYear();
   const mo = String(d.getMonth() + 1).padStart(2, '0');
   const da = String(d.getDate()).padStart(2, '0');
   return `${y}-${mo}-${da}`;
+}
+
+// "yyyy-MM-dd" を「ローカルタイムの0時」の Date にする。
+// new Date('2026-09-01') は UTC0時（＝日本時間の午前9時）と解釈され、
+// 月境界が9時間ずれてバーが翌月へ食い込むため、必ずこれで解釈する。
+function parseLocal(dateStr) {
+  if (dateStr instanceof Date) return dateStr;
+  const s = String(dateStr || '').slice(0, 10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return new Date(dateStr);
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 
 function normalizeKoji(list) {
@@ -1202,7 +1213,7 @@ function getFiscalMonths() {
 
 // 日付がその月のどの位置か（0〜1にクランプ）
 function dayFrac(dateStr, m) {
-  const d  = new Date(dateStr);
+  const d  = parseLocal(dateStr);   // ローカル0時で解釈（月境界の9時間ズレを防ぐ）
   const m0 = new Date(m.getFullYear(), m.getMonth(), 1);
   const m1 = new Date(m.getFullYear(), m.getMonth() + 1, 1);
   if (d <= m0) return 0;
@@ -1267,9 +1278,9 @@ function renderGantt(monthsOverride, forPrint) {
   const rangeEnd   = new Date(lastM.getFullYear(), lastM.getMonth() + 1, 1);
   const inRange = r => {
     if (!r.start) return false;
-    const rs  = new Date(r.start);
+    const rs  = parseLocal(r.start);
     const eff = finalEndStrOf(r) || r.end || r.start;
-    const re  = new Date(eff);
+    const re  = parseLocal(eff);
     return rs < rangeEnd && re >= rangeStart;   // レンジに少しでも重なれば表示
   };
   const active = kojiData.filter(inRange);
@@ -1283,20 +1294,20 @@ function renderGantt(monthsOverride, forPrint) {
     const light  = LIGHT[row.type] || '#eee';
     const spot   = isSpot(row);
     const plan   = isPlan(row);
-    const re     = new Date(row.end);
-    const rex    = row.ext ? new Date(row.ext) : null;
+    const re     = parseLocal(row.end);
+    const rex    = row.ext ? parseLocal(row.ext) : null;
     const hasExt = rex && rex > re;
     const segs   = segmentsOf(row);
     const gaps   = gapsOf(row);
     const finalEndStr = finalEndStrOf(row);
-    const finalEnd    = new Date(finalEndStr);
+    const finalEnd    = parseLocal(finalEndStr);
 
     const bodyHtml = (segStart, segEnd, m, mNext, roundRightAllowed) => {
       const bodyL = dayFrac(segStart, m);
       const bodyR = dayFrac(segEnd,   m);
       const bodyW = bodyR - bodyL;
       if (bodyW <= 0) return { html: '', bodyL, bodyW };
-      const sD = new Date(segStart), eD = new Date(segEnd);
+      const sD = parseLocal(segStart), eD = parseLocal(segEnd);
       const isStartCell = sD >= m && sD < mNext;
       const isEndCell   = eD >= m && eD < mNext;
       const roundR = isEndCell && roundRightAllowed;
@@ -1328,9 +1339,9 @@ function renderGantt(monthsOverride, forPrint) {
     months.forEach(m => {
       const mNext = new Date(m.getFullYear(), m.getMonth() + 1, 1);
       let overlaps = false;
-      segs.forEach(s => { if (new Date(s.start) < mNext && new Date(s.end) >= m) overlaps = true; });
-      if (hasExt && new Date(row.end) < mNext && rex >= m) overlaps = true;
-      gaps.forEach(g => { if (new Date(g.start) < mNext && new Date(g.end) >= m) overlaps = true; });
+      segs.forEach(s => { if (parseLocal(s.start) < mNext && parseLocal(s.end) >= m) overlaps = true; });
+      if (hasExt && parseLocal(row.end) < mNext && rex >= m) overlaps = true;
+      gaps.forEach(g => { if (parseLocal(g.start) < mNext && parseLocal(g.end) >= m) overlaps = true; });
 
       const willComment = overlaps && row.comment && !commentDone;
       const cls = ['month-cell', sep, willComment ? 'has-comment' : ''].filter(Boolean).join(' ');
@@ -1383,7 +1394,7 @@ function renderGantt(monthsOverride, forPrint) {
 
   // 工期の長さ（日数、開始〜最終終了日）。工事別の並び替え用。
   const spanDays = r => {
-    const s = new Date(r.start), e = new Date(finalEndStrOf(r) || r.end || r.start);
+    const s = parseLocal(r.start), e = parseLocal(finalEndStrOf(r) || r.end || r.start);
     return (e - s);
   };
 
@@ -1405,8 +1416,8 @@ function renderGantt(monthsOverride, forPrint) {
     const kgroups = {};
     rows.forEach(r => { (kgroups[r.name] = kgroups[r.name] || []).push(r); });
     const names = Object.keys(kgroups).sort((a, b) => {
-      const sa = Math.min(...kgroups[a].map(r => new Date(r.start)));
-      const sb = Math.min(...kgroups[b].map(r => new Date(r.start)));
+      const sa = Math.min(...kgroups[a].map(r => parseLocal(r.start)));
+      const sb = Math.min(...kgroups[b].map(r => parseLocal(r.start)));
       return sa - sb;
     });
 
