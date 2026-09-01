@@ -654,6 +654,11 @@ body.is-admin .btn-del { display: block; }
 
 <div id="page-gantt" class="page active">
   <div class="toolbar">
+    <label>表示</label>
+    <select id="sel-view" onchange="renderGantt()">
+      <option value="person" selected>担当者別</option>
+      <option value="koji">工事別</option>
+    </select>
     <label>表示期間</label>
     <select id="sel-range" onchange="renderGantt()">
       <option value="3">3ヶ月</option>
@@ -1270,20 +1275,124 @@ function renderGantt(monthsOverride, forPrint) {
   const active = kojiData.filter(inRange);
   const rows   = fp ? active.filter(r => r.person === fp) : active;
 
-  const groups = {};
-  if (fp) {
-    if (masters.includes(fp)) groups[fp] = [];
-  } else {
-    masters.forEach(p => { groups[p] = []; });
-  }
-  rows.forEach(r => {
-    if (!groups[r.person]) groups[r.person] = [];
-    groups[r.person].push(r);
-  });
+  const view = (document.getElementById('sel-view') || {}).value || 'person';
 
+  // ---- 1行ぶんの月セル（バー）HTMLを返す共通関数 ----
+  function barCellsHtml(row, sep) {
+    const color  = COLOR[row.type] || '#888';
+    const light  = LIGHT[row.type] || '#eee';
+    const spot   = isSpot(row);
+    const plan   = isPlan(row);
+    const re     = new Date(row.end);
+    const rex    = row.ext ? new Date(row.ext) : null;
+    const hasExt = rex && rex > re;
+    const segs   = segmentsOf(row);
+    const gaps   = gapsOf(row);
+    const finalEndStr = finalEndStrOf(row);
+    const finalEnd    = new Date(finalEndStr);
+
+    const bodyHtml = (segStart, segEnd, m, mNext, roundRightAllowed) => {
+      const bodyL = dayFrac(segStart, m);
+      const bodyR = dayFrac(segEnd,   m);
+      const bodyW = bodyR - bodyL;
+      if (bodyW <= 0) return { html: '', bodyL, bodyW };
+      const sD = new Date(segStart), eD = new Date(segEnd);
+      const isStartCell = sD >= m && sD < mNext;
+      const isEndCell   = eD >= m && eD < mNext;
+      const roundR = isEndCell && roundRightAllowed;
+      const radius = (isStartCell && roundR) ? '9px'
+                   : isStartCell ? '9px 0 0 9px'
+                   : roundR      ? '0 9px 9px 0' : '0';
+      let out = '';
+      if (spot) {
+        const singleCell = isStartCell && isEndCell;
+        const sRad = spotRadius(isStartCell, isEndCell);
+        const seg  = singleCell ? widen(bodyL, bodyR) : { left: bodyL, width: bodyW };
+        out = `<div class="bar-spot"
+          style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:rgba(255,255,255,.9);background:${color};${sRad}${!isStartCell ? 'border-left:none;' : ''}${!isEndCell ? 'border-right:none;' : ''}"
+          onclick="openPop(event,${row.id})"></div>`;
+      } else if (plan) {
+        out = `<div class="bar-plan"
+          style="left:${bodyL*100}%;width:${bodyW*100}%;border-color:${color};border-radius:${radius}"
+          onclick="openPop(event,${row.id})"></div>`;
+      } else {
+        out = `<div class="bar-track"
+          style="left:${bodyL*100}%;width:${bodyW*100}%;background:${color};border-radius:${radius}"
+          onclick="openPop(event,${row.id})"></div>`;
+      }
+      return { html: out, bodyL, bodyW, isStartCell };
+    };
+
+    let cells = '';
+    let commentDone = false;
+    months.forEach(m => {
+      const mNext = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+      let overlaps = false;
+      segs.forEach(s => { if (new Date(s.start) < mNext && new Date(s.end) >= m) overlaps = true; });
+      if (hasExt && new Date(row.end) < mNext && rex >= m) overlaps = true;
+      gaps.forEach(g => { if (new Date(g.start) < mNext && new Date(g.end) >= m) overlaps = true; });
+
+      const willComment = overlaps && row.comment && !commentDone;
+      const cls = ['month-cell', sep, willComment ? 'has-comment' : ''].filter(Boolean).join(' ');
+      cells += `<td class="${cls}">`;
+      if (overlaps) {
+        cells += '<div class="bar-wrap">';
+        let firstBody = null;
+        segs.forEach((s, si) => {
+          const roundRightAllowed = !(si === 0 && hasExt);
+          const b = bodyHtml(s.start, s.end, m, mNext, roundRightAllowed);
+          if (b.html) { cells += b.html; if (!firstBody) firstBody = b; }
+        });
+        if (hasExt) {
+          const extL = dayFrac(row.end, m);
+          const extR = dayFrac(row.ext, m);
+          const extW = extR - extL;
+          const extEndCell = rex >= m && rex < mNext;
+          if (extW > 0) {
+            const radius = extEndCell ? '0 9px 9px 0' : '0';
+            cells += `<div class="bar-ext"
+              style="left:${extL*100}%;width:${extW*100}%;border-color:${color};background:${light};border-radius:${radius}"
+              onclick="openPop(event,${row.id})">
+              <div class="bar-ext-hatch" style="background:${hatchBg(color)}"></div>
+            </div>`;
+          }
+        }
+        gaps.forEach(g => {
+          const gapL = dayFrac(g.start, m);
+          const gapR = dayFrac(g.end,   m);
+          const gapW = gapR - gapL;
+          if (gapW > 0) {
+            cells += `<div class="gap-line" style="left:${gapL*100}%;width:${gapW*100}%"></div>`;
+            if (gapW > 0.7) cells += `<div class="gap-label" style="left:${(gapL+gapW/2)*100}%;transform:translateX(-50%)">中断</div>`;
+          }
+        });
+        if (finalEnd >= m && finalEnd < mNext) {
+          const endF = dayFrac(finalEndStr, m);
+          cells += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${finalEnd.getMonth()+1}/${finalEnd.getDate()}${hasExt ? '(延)' : ''}</div>`;
+        }
+        if (willComment && firstBody) {
+          cells += `<div class="bar-comment" style="left:${firstBody.isStartCell ? firstBody.bodyL*100 : 0}%">💬 ${escapeHtml(row.comment)}</div>`;
+          commentDone = true;
+        }
+        cells += '</div>';
+      }
+      cells += '</td>';
+    });
+    return cells;
+  }
+
+  // 工期の長さ（日数、開始〜最終終了日）。工事別の並び替え用。
+  const spanDays = r => {
+    const s = new Date(r.start), e = new Date(finalEndStrOf(r) || r.end || r.start);
+    return (e - s);
+  };
+
+  // ---- ヘッダー ----
+  const col1 = view === 'koji' ? '工事名' : '担当者';
+  const col2 = view === 'koji' ? '担当者' : '工事名';
   let html = '<table class="gantt"><thead><tr>';
-  html += '<th class="col-name">担当者</th>';
-  html += '<th class="col-job">工事名</th>';
+  html += `<th class="col-name">${col1}</th>`;
+  html += `<th class="col-job">${col2}</th>`;
   html += '<th class="col-prog">進捗</th>';
   months.forEach(m => {
     const isNow = m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth();
@@ -1291,188 +1400,113 @@ function renderGantt(monthsOverride, forPrint) {
   });
   html += '</tr></thead><tbody>';
 
-  const persons = Object.keys(groups);
-  if (!persons.length) {
-    html += `<tr><td colspan="${3 + months.length}"><div class="empty">データがありません</div></td></tr>`;
-  }
+  if (view === 'koji') {
+    // ===== 工事別：工事名で束ね、滞在期間の長い順に人を並べる =====
+    const kgroups = {};
+    rows.forEach(r => { (kgroups[r.name] = kgroups[r.name] || []).push(r); });
+    const names = Object.keys(kgroups).sort((a, b) => {
+      const sa = Math.min(...kgroups[a].map(r => new Date(r.start)));
+      const sb = Math.min(...kgroups[b].map(r => new Date(r.start)));
+      return sa - sb;
+    });
 
-  persons.forEach((person, pi) => {
-    const entries     = groups[person];
-    const isLastGroup = pi === persons.length - 1;
-    const nameSep     = !isLastGroup ? 'sep' : '';
-    const safePerson  = String(person).replace(/'/g, "\\'");
-    const addBtn = (isAdmin && !forPrint)
-      ? `<button class="add-koji-btn" onclick="event.stopPropagation();openAddModal('${safePerson}')" title="この担当者で工事を追加">＋</button>`
-      : '';
-
-    if (entries.length === 0) {
-      html += '<tr>';
-      html += `<td class="col-name ${nameSep}">${escapeHtml(person)}${addBtn}</td>`;
-      html += `<td class="col-job ${nameSep}"></td>`;
-      html += `<td class="col-prog ${nameSep}" style="cursor:default"></td>`;
-      months.forEach(() => { html += `<td class="month-cell ${nameSep}"></td>`; });
-      html += '</tr>';
-      return;
+    if (!names.length) {
+      html += `<tr><td colspan="${3 + months.length}"><div class="empty">データがありません</div></td></tr>`;
     }
 
-    entries.forEach((row, ri) => {
-      const isLastRow = ri === entries.length - 1;
-      const sep       = isLastRow && !isLastGroup ? 'sep' : '';
-      const color     = COLOR[row.type] || '#888';
-      const light     = LIGHT[row.type] || '#eee';
-      const spot      = isSpot(row);
-      const plan      = isPlan(row);
-      const solid     = useSolidBar(row);
+    names.forEach((name, gi) => {
+      const entries = kgroups[name].slice().sort((a, b) => spanDays(b) - spanDays(a));
+      const isLastGroup = gi === names.length - 1;
+      const grpSep = !isLastGroup ? 'sep' : '';
+      const color  = COLOR[entries[0].type] || '#888';
+      const prog   = entries[0].progress || 0;
 
-      const rs     = new Date(row.start);
-      const re     = new Date(row.end);
-      const rex    = row.ext ? new Date(row.ext) : null;
-      const hasExt = rex && rex > re;
+      entries.forEach((row, ri) => {
+        const isLastRow = ri === entries.length - 1;
+        const sep = isLastRow && !isLastGroup ? 'sep' : '';
+        html += '<tr>';
+        if (ri === 0) {
+          // 工事名（束ねてrowspan）＋種別カラー
+          html += `<td class="col-name ${grpSep}" rowspan="${entries.length}" style="border-left:3px solid ${color};text-align:left">${escapeHtml(name)}</td>`;
+        }
+        // 担当者名（クリックでこの人の工期変更）
+        const memoMark = row.comment ? ' <span style="color:#9a6000;font-size:10px">●</span>' : '';
+        html += `<td class="col-job ${sep}" onclick="openPopTerm(event,${row.id})"
+          title="${escapeHtml(row.person)}（クリックで工期変更）">${escapeHtml(row.person)}${memoMark}</td>`;
+        if (ri === 0) {
+          // 進捗（工事に1つ・rowspan）
+          html += `<td class="col-prog ${grpSep}" rowspan="${entries.length}"
+            onclick="openPopProg(event,${entries[0].id})" title="クリックで進捗・コメント入力">
+            <div class="prog-num" style="color:${color}">${prog}%</div>
+            <div class="prog-gauge"><div class="prog-gauge-fill" style="width:${prog}%;background:${color}"></div></div>
+          </td>`;
+        }
+        html += barCellsHtml(row, sep);
+        html += '</tr>';
+      });
+    });
 
-      // 実線セグメント（工期を中断で分割）と、中断区間。
-      const segs = segmentsOf(row);        // [{start,end}, ...]
-      const gaps = gapsOf(row);            // 中断区間 [{start,end}, ...]
-      const nBreaks = (row.breaks || []).length;
+  } else {
+    // ===== 担当者別（従来） =====
+    const groups = {};
+    if (fp) {
+      if (masters.includes(fp)) groups[fp] = [];
+    } else {
+      masters.forEach(p => { groups[p] = []; });
+    }
+    rows.forEach(r => {
+      if (!groups[r.person]) groups[r.person] = [];
+      groups[r.person].push(r);
+    });
 
-      // 最終終了日（延長があれば延長日）
-      const finalEndStr = finalEndStrOf(row);
-      const finalEnd    = new Date(finalEndStr);
+    const persons = Object.keys(groups);
+    if (!persons.length) {
+      html += `<tr><td colspan="${3 + months.length}"><div class="empty">データがありません</div></td></tr>`;
+    }
 
-      html += '<tr>';
-      if (ri === 0) {
-        html += `<td class="col-name ${nameSep}" rowspan="${entries.length}">${escapeHtml(person)}${addBtn}</td>`;
+    persons.forEach((person, pi) => {
+      const entries     = groups[person];
+      const isLastGroup = pi === persons.length - 1;
+      const nameSep     = !isLastGroup ? 'sep' : '';
+      const safePerson  = String(person).replace(/'/g, "\\'");
+      const addBtn = (isAdmin && !forPrint)
+        ? `<button class="add-koji-btn" onclick="event.stopPropagation();openAddModal('${safePerson}')" title="この担当者で工事を追加">＋</button>`
+        : '';
+
+      if (entries.length === 0) {
+        html += '<tr>';
+        html += `<td class="col-name ${nameSep}">${escapeHtml(person)}${addBtn}</td>`;
+        html += `<td class="col-job ${nameSep}"></td>`;
+        html += `<td class="col-prog ${nameSep}" style="cursor:default"></td>`;
+        months.forEach(() => { html += `<td class="month-cell ${nameSep}"></td>`; });
+        html += '</tr>';
+        return;
       }
 
-      // 工事名セル：種別カラーの左ボーダー。クリックで工期変更タブを開く。
-      const memoMark = row.comment ? ' <span style="color:#9a6000;font-size:10px">●</span>' : '';
-      const pmark    = nBreaks > 0 ? ` <span style="font-size:9px;color:#888">(中断${nBreaks})</span>` : '';
-      html += `<td class="col-job ${sep}" style="border-left:3px solid ${color}"
-        onclick="openPopTerm(event,${row.id})"
-        title="${escapeHtml(row.name)}（クリックで工期変更）">${escapeHtml(row.name)}${pmark}${memoMark}</td>`;
+      entries.forEach((row, ri) => {
+        const isLastRow = ri === entries.length - 1;
+        const sep       = isLastRow && !isLastGroup ? 'sep' : '';
+        const color     = COLOR[row.type] || '#888';
+        const nBreaks   = (row.breaks || []).length;
 
-      // 進捗列：数字＋小ゲージ。クリックで進捗・コメント入力を開く。
-      html += `<td class="col-prog ${sep}"
-        onclick="openPopProg(event,${row.id})"
-        title="クリックで進捗・コメント入力">
-        <div class="prog-num" style="color:${color}">${row.progress}%</div>
-        <div class="prog-gauge"><div class="prog-gauge-fill" style="width:${row.progress}%;background:${color}"></div></div>
-      </td>`;
-
-      // 1区間ぶんの本体バーHTML（スポット/予定/常駐で描き分け）
-      const bodyHtml = (segStart, segEnd, m, mNext, roundRightAllowed) => {
-        const bodyL = dayFrac(segStart, m);
-        const bodyR = dayFrac(segEnd,   m);
-        const bodyW = bodyR - bodyL;
-        if (bodyW <= 0) return { html: '', bodyL, bodyW };
-        const sD = new Date(segStart), eD = new Date(segEnd);
-        const isStartCell = sD >= m && sD < mNext;
-        const isEndCell   = eD >= m && eD < mNext;
-        const roundR = isEndCell && roundRightAllowed;
-        const radius = (isStartCell && roundR) ? '9px'
-                     : isStartCell ? '9px 0 0 9px'
-                     : roundR      ? '0 9px 9px 0' : '0';
-        let out = '';
-        if (spot) {
-          const singleCell = isStartCell && isEndCell;
-          const sRad = spotRadius(isStartCell, isEndCell);
-          const seg  = singleCell ? widen(bodyL, bodyR) : { left: bodyL, width: bodyW };
-          out = `<div class="bar-spot"
-            style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:rgba(255,255,255,.9);background:${color};${sRad}${!isStartCell ? 'border-left:none;' : ''}${!isEndCell ? 'border-right:none;' : ''}"
-            onclick="openPop(event,${row.id})"></div>`;
-        } else if (plan) {
-          out = `<div class="bar-plan"
-            style="left:${bodyL*100}%;width:${bodyW*100}%;border-color:${color};border-radius:${radius}"
-            onclick="openPop(event,${row.id})"></div>`;
-        } else {
-          out = `<div class="bar-track"
-            style="left:${bodyL*100}%;width:${bodyW*100}%;background:${color};border-radius:${radius}"
-            onclick="openPop(event,${row.id})"></div>`;
+        html += '<tr>';
+        if (ri === 0) {
+          html += `<td class="col-name ${nameSep}" rowspan="${entries.length}">${escapeHtml(person)}${addBtn}</td>`;
         }
-        return { html: out, bodyL, bodyW, isStartCell };
-      };
-
-      let commentDone = false;
-
-      months.forEach(m => {
-        const mNext = new Date(m.getFullYear(), m.getMonth() + 1, 1);
-
-        // この月に、いずれかのセグメント／延長／中断がかかるか
-        let overlaps = false;
-        segs.forEach(s => { if (new Date(s.start) < mNext && new Date(s.end) >= m) overlaps = true; });
-        if (hasExt && rex >= m && re < mNext) overlaps = true;
-        if (hasExt && new Date(row.end) < mNext && rex >= m) overlaps = true;
-        gaps.forEach(g => { if (new Date(g.start) < mNext && new Date(g.end) >= m) overlaps = true; });
-
-        const willComment = overlaps && row.comment && !commentDone;
-        const cls = ['month-cell', sep, willComment ? 'has-comment' : '']
-          .filter(Boolean).join(' ');
-
-        html += `<td class="${cls}">`;
-
-        if (overlaps) {
-          html += '<div class="bar-wrap">';
-          let firstBody = null;   // コメント位置用
-
-          // ---- 各セグメントの本体 ----
-          segs.forEach((s, si) => {
-            // 第1期間(si=0)は、延長があるとき右端を丸めない
-            const roundRightAllowed = !(si === 0 && hasExt);
-            const b = bodyHtml(s.start, s.end, m, mNext, roundRightAllowed);
-            if (b.html) {
-              html += b.html;
-              if (!firstBody) firstBody = b;
-            }
-          });
-
-          // ---- 延長セグメント（第1期間の終了〜延長日）。ハッチング＋実線枠 ----
-          if (hasExt) {
-            const extL = dayFrac(row.end, m);
-            const extR = dayFrac(row.ext, m);
-            const extW = extR - extL;
-            const extEndCell = rex >= m && rex < mNext;
-            if (extW > 0) {
-              const radius = extEndCell ? '0 9px 9px 0' : '0';
-              html += `<div class="bar-ext"
-                style="left:${extL*100}%;width:${extW*100}%;border-color:${color};background:${light};border-radius:${radius}"
-                onclick="openPop(event,${row.id})">
-                <div class="bar-ext-hatch" style="background:${hatchBg(color)}"></div>
-              </div>`;
-            }
-          }
-
-          // ---- 中断区間の点線 ----
-          gaps.forEach(g => {
-            const gapL = dayFrac(g.start, m);
-            const gapR = dayFrac(g.end,   m);
-            const gapW = gapR - gapL;
-            if (gapW > 0) {
-              html += `<div class="gap-line" style="left:${gapL*100}%;width:${gapW*100}%"></div>`;
-              if (gapW > 0.7) {
-                html += `<div class="gap-label" style="left:${(gapL+gapW/2)*100}%;transform:translateX(-50%)">中断</div>`;
-              }
-            }
-          });
-
-          // ---- 最終終了日ラベル（濃く1回） ----
-          if (finalEnd >= m && finalEnd < mNext) {
-            const endF = dayFrac(finalEndStr, m);
-            html += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${finalEnd.getMonth()+1}/${finalEnd.getDate()}${hasExt ? '(延)' : ''}</div>`;
-          }
-
-          // ---- コメント（最初に見えた本体の左端に1回） ----
-          if (willComment && firstBody) {
-            html += `<div class="bar-comment" style="left:${firstBody.isStartCell ? firstBody.bodyL*100 : 0}%">💬 ${escapeHtml(row.comment)}</div>`;
-            commentDone = true;
-          }
-
-          html += '</div>';
-        }
-        html += '</td>';
+        const memoMark = row.comment ? ' <span style="color:#9a6000;font-size:10px">●</span>' : '';
+        const pmark    = nBreaks > 0 ? ` <span style="font-size:9px;color:#888">(中断${nBreaks})</span>` : '';
+        html += `<td class="col-job ${sep}" style="border-left:3px solid ${color}"
+          onclick="openPopTerm(event,${row.id})"
+          title="${escapeHtml(row.name)}（クリックで工期変更）">${escapeHtml(row.name)}${pmark}${memoMark}</td>`;
+        html += `<td class="col-prog ${sep}" onclick="openPopProg(event,${row.id})" title="クリックで進捗・コメント入力">
+          <div class="prog-num" style="color:${color}">${row.progress}%</div>
+          <div class="prog-gauge"><div class="prog-gauge-fill" style="width:${row.progress}%;background:${color}"></div></div>
+        </td>`;
+        html += barCellsHtml(row, sep);
+        html += '</tr>';
       });
-
-      html += '</tr>';
     });
-  });
+  }
 
   html += '</tbody></table>';
   document.getElementById('gantt-container').innerHTML = html;
