@@ -433,6 +433,17 @@ body.is-admin .admin-only-field { display: flex; }
 .p2-body { display: none; }
 .p2-body.open { display: block; }
 .p2-hint { font-size: 10px; color: var(--text-sub); line-height: 1.6; margin-bottom: 8px; }
+/* 可変の期間リスト行 */
+.period-row {
+  display: flex; align-items: flex-end; gap: 6px; margin-bottom: 8px;
+}
+.period-row .f-row { flex: 1; margin-bottom: 0; }
+.period-del {
+  border: 1px solid var(--red); color: var(--red); background: transparent;
+  border-radius: 7px; width: 30px; height: 33px; cursor: pointer; font-size: 15px;
+  flex-shrink: 0; line-height: 1;
+}
+.period-del:hover { background: var(--red-lt); }
 .pop-footer { display: flex; gap: 8px; margin-top: 13px; }
 .pop-footer button {
   padding: 9px; border-radius: 8px; font-size: 13px; cursor: pointer;
@@ -766,8 +777,14 @@ body.is-admin .btn-del { display: block; }
     <div class="form-row"><label>開始日</label><input type="date" id="a-start"></div>
     <div class="form-row"><label>終了日</label><input type="date" id="a-end"></div>
     <div class="form-row"><label>延長日（任意）</label><input type="date" id="a-ext"></div>
-    <div class="form-row"><label>第2期間 再開日（任意）</label><input type="date" id="a-start2"></div>
-    <div class="form-row"><label>第2期間 終了日（任意）</label><input type="date" id="a-end2"></div>
+    <div class="p2-section">
+      <div class="p2-head">
+        <span class="p2-title">追加の参加期間（任意）</span>
+        <button class="p2-toggle" id="a-period-add" onclick="addPeriodRow('a')">＋ 区間を追加</button>
+      </div>
+      <div class="p2-hint">間を空けて再参加する場合に追加します。何区間でも足せます。</div>
+      <div id="a-period-list"></div>
+    </div>
     <div class="modal-footer">
       <div></div>
       <div class="modal-footer-right">
@@ -841,14 +858,11 @@ body.is-admin .btn-del { display: block; }
 
     <div class="p2-section">
       <div class="p2-head">
-        <span class="p2-title">第2期間（間を空けて再参加）</span>
-        <button class="p2-toggle" id="p2-toggle" onclick="toggleP2()">＋ 追加</button>
+        <span class="p2-title">追加の参加期間（間を空けて再参加）</span>
+        <button class="p2-toggle" id="p2-add" onclick="addPeriodRow()">＋ 区間を追加</button>
       </div>
-      <div class="p2-body" id="p2-body">
-        <div class="p2-hint">一度離れて、また同じ工事に戻る場合に入力します。「− 削除」で第2期間なしに戻せます。</div>
-        <div class="f-row"><label>再開日</label><input type="date" id="f-start2"></div>
-        <div class="f-row"><label>終了日</label><input type="date" id="f-end2"></div>
-      </div>
+      <div class="p2-hint" id="p2-hint">一度離れて、また同じ工事に戻る場合に追加します。何区間でも足せます。</div>
+      <div id="period-list"></div>
     </div>
 
     <div class="pop-footer">
@@ -902,24 +916,65 @@ function fmtDate(s) {
 }
 
 function normalizeKoji(list) {
-  return (list || []).map(r => ({
-    ...r,
-    start:  fmtDate(r.start),
-    end:    fmtDate(r.end),
-    ext:    fmtDate(r.ext),
-    start2: fmtDate(r.start2),
-    end2:   fmtDate(r.end2),
-    progress: Number(r.progress) || 0,
-  }));
+  return (list || []).map(r => {
+    // periods（第2期間以降）を配列に正規化。
+    // GASからは JSON文字列または配列で来る。旧 start2/end2 も先頭区間として吸収。
+    let periods = [];
+    const raw = r.periods;
+    if (Array.isArray(raw)) {
+      periods = raw;
+    } else if (typeof raw === 'string' && raw.trim()) {
+      try { const p = JSON.parse(raw); if (Array.isArray(p)) periods = p; } catch (e) { periods = []; }
+    }
+    periods = periods
+      .map(p => ({ start: fmtDate(p.start), end: fmtDate(p.end) }))
+      .filter(p => p.start && p.end);
+    // 旧 start2/end2 があって periods が空なら移行
+    if (!periods.length && r.start2 && r.end2) {
+      periods = [{ start: fmtDate(r.start2), end: fmtDate(r.end2) }];
+    }
+    return {
+      ...r,
+      start:  fmtDate(r.start),
+      end:    fmtDate(r.end),
+      ext:    fmtDate(r.ext),
+      periods,
+      progress: Number(r.progress) || 0,
+    };
+  });
 }
 
-// 第2期間（間を空けて再参加）を持つか
-function hasP2(r) { return !!(r.start2 && r.end2); }
+// 追加期間（第2期間以降）を持つか
+function hasPeriods(r) { return Array.isArray(r.periods) && r.periods.length > 0; }
 
-// 工事の実質的な最終終了日（第2期間 > 延長 > 終了日）
+// 工事の実質的な最終終了日（最後の追加期間 > 延長 > 終了日）
 function finalEndStrOf(r) {
-  if (hasP2(r)) return r.end2;
+  if (hasPeriods(r)) return r.periods[r.periods.length - 1].end;
   return (r.ext && r.ext > r.end) ? r.ext : r.end;
+}
+
+// 描画・重なり判定に使う「実線セグメント」の配列。
+//   [ 第1期間(開始〜終了), 追加期間1, 追加期間2, ... ]
+// 各要素 {start, end}。延長(ext)は別扱い（ハッチングで描く）。
+function segmentsOf(r) {
+  const segs = [{ start: r.start, end: r.end }];
+  (r.periods || []).forEach(p => segs.push({ start: p.start, end: p.end }));
+  return segs;
+}
+
+// 中断（参加なし）の区間配列。
+//   第1期間の実効終了（延長込み）〜 追加期間1開始、追加期間i終了〜追加期間i+1開始 …
+function gapsOf(r) {
+  const gaps = [];
+  const seg1EffEnd = (r.ext && r.ext > r.end) ? r.ext : r.end;
+  const ps = r.periods || [];
+  if (ps.length) {
+    gaps.push({ start: seg1EffEnd, end: ps[0].start });
+    for (let i = 0; i < ps.length - 1; i++) {
+      gaps.push({ start: ps[i].end, end: ps[i + 1].start });
+    }
+  }
+  return gaps;
 }
 
 function escapeHtml(s) {
@@ -1232,21 +1287,25 @@ function renderGantt(monthsOverride, forPrint) {
       const re     = new Date(row.end);
       const rex    = row.ext ? new Date(row.ext) : null;
       const hasExt = rex && rex > re;
-      // 第1期間の終わり（延長があれば延長日）
-      const seg1End    = hasExt ? rex : re;
-      const seg1EndStr = hasExt ? row.ext : row.end;
 
-      // 第2期間（間を空けて再参加）
-      const p2  = hasP2(row);
-      const rs2 = p2 ? new Date(row.start2) : null;
-      const re2 = p2 ? new Date(row.end2)   : null;
+      // 実線セグメント（第1期間＋追加期間）と、中断区間。
+      const segs = segmentsOf(row);        // [{start,end}, ...]
+      const gaps = gapsOf(row);            // [{start,end}, ...]（参加なし区間）
+      const nPeriods = (row.periods || []).length;
 
       // 進捗の先端：開始 〜 最終終了日 に対する progress% の位置。
-      // 全長を基準にするので、月ごとに進捗が繰り返されない。
-      const finalEndStr = p2 ? row.end2 : seg1EndStr;
+      const finalEndStr = finalEndStrOf(row);
       const finalEnd    = new Date(finalEndStr);
       const tip    = new Date(rs.getTime() + (finalEnd - rs) * (row.progress / 100));
       const tipStr = ymd(tip);
+
+      // ラベルを薄く出す「途中の区間終了日」（最終終了日は別で濃く出す）
+      const fadedEnds = [];
+      const seg1EffEnd = hasExt ? row.ext : row.end;
+      if (nPeriods > 0) {
+        fadedEnds.push(seg1EffEnd);
+        for (let i = 0; i < nPeriods - 1; i++) fadedEnds.push(row.periods[i].end);
+      }
 
       html += '<tr>';
       if (ri === 0) {
@@ -1255,10 +1314,10 @@ function renderGantt(monthsOverride, forPrint) {
 
       // 工事名セル：種別カラーの左ボーダー。クリックで工期変更タブを開く。
       const memoMark = row.comment ? ' <span style="color:#9a6000;font-size:10px">●</span>' : '';
-      const p2mark   = p2 ? ' <span style="font-size:9px;color:#888">(2期)</span>' : '';
+      const pmark    = nPeriods > 0 ? ` <span style="font-size:9px;color:#888">(${nPeriods + 1}期)</span>` : '';
       html += `<td class="col-job ${sep}" style="border-left:3px solid ${color}"
         onclick="openPopTerm(event,${row.id})"
-        title="${escapeHtml(row.name)}（クリックで工期変更）">${escapeHtml(row.name)}${p2mark}${memoMark}</td>`;
+        title="${escapeHtml(row.name)}（クリックで工期変更）">${escapeHtml(row.name)}${pmark}${memoMark}</td>`;
 
       // 進捗列：数字＋小ゲージ。クリックで進捗・コメント入力を開く。
       html += `<td class="col-prog ${sep}"
@@ -1268,14 +1327,50 @@ function renderGantt(monthsOverride, forPrint) {
         <div class="prog-gauge"><div class="prog-gauge-fill" style="width:${row.progress}%;background:${color}"></div></div>
       </td>`;
 
+      // 1区間ぶんの本体バーHTML（スポット/予定/常駐で描き分け）
+      const bodyHtml = (segStart, segEnd, m, mNext, roundRightAllowed) => {
+        const bodyL = dayFrac(segStart, m);
+        const bodyR = dayFrac(segEnd,   m);
+        const bodyW = bodyR - bodyL;
+        if (bodyW <= 0) return { html: '', bodyL, bodyW };
+        const sD = new Date(segStart), eD = new Date(segEnd);
+        const isStartCell = sD >= m && sD < mNext;
+        const isEndCell   = eD >= m && eD < mNext;
+        const roundR = isEndCell && roundRightAllowed;
+        const radius = (isStartCell && roundR) ? '9px'
+                     : isStartCell ? '9px 0 0 9px'
+                     : roundR      ? '0 9px 9px 0' : '0';
+        let out = '';
+        if (spot) {
+          const singleCell = isStartCell && isEndCell;
+          const sRad = spotRadius(isStartCell, isEndCell);
+          const seg  = singleCell ? widen(bodyL, bodyR) : { left: bodyL, width: bodyW };
+          out = `<div class="bar-spot"
+            style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:rgba(255,255,255,.9);background:${color};${sRad}${!isStartCell ? 'border-left:none;' : ''}${!isEndCell ? 'border-right:none;' : ''}"
+            onclick="openPop(event,${row.id})"></div>`;
+        } else if (plan) {
+          out = `<div class="bar-plan"
+            style="left:${bodyL*100}%;width:${bodyW*100}%;border-color:${color};border-radius:${radius}"
+            onclick="openPop(event,${row.id})"></div>`;
+        } else {
+          out = `<div class="bar-track"
+            style="left:${bodyL*100}%;width:${bodyW*100}%;background:${color};border-radius:${radius}"
+            onclick="openPop(event,${row.id})"></div>`;
+        }
+        return { html: out, bodyL, bodyW, isStartCell };
+      };
+
       let commentDone = false;
 
       months.forEach(m => {
         const mNext = new Date(m.getFullYear(), m.getMonth() + 1, 1);
-        // 第1期間・第2期間・中断期間のいずれかがこの月にかかるか
-        const overlaps = (rs < mNext && seg1End >= m)
-          || (p2 && rs2 < mNext && re2 >= m)
-          || (p2 && seg1End < m && rs2 >= mNext);
+
+        // この月に、いずれかのセグメント／延長／中断がかかるか
+        let overlaps = false;
+        segs.forEach(s => { if (new Date(s.start) < mNext && new Date(s.end) >= m) overlaps = true; });
+        if (hasExt && rex >= m && re < mNext) overlaps = true;
+        if (hasExt && new Date(row.end) < mNext && rex >= m) overlaps = true;
+        gaps.forEach(g => { if (new Date(g.start) < mNext && new Date(g.end) >= m) overlaps = true; });
 
         const willComment = overlaps && row.comment && !commentDone;
         const cls = ['month-cell', sep, willComment ? 'has-comment' : '']
@@ -1285,51 +1380,25 @@ function renderGantt(monthsOverride, forPrint) {
 
         if (overlaps) {
           html += '<div class="bar-wrap">';
-          const tipF = dayFrac(tipStr, m);
+          let firstBody = null;   // コメント位置用
 
-          // ---- 第1期間の本体（開始〜終了） ----
-          const bodyL = dayFrac(row.start, m);
-          const bodyR = dayFrac(row.end,   m);
-          const bodyW = bodyR - bodyL;
-          const isStartCell = rs >= m && rs < mNext;
-          const isEndCell   = re >= m && re < mNext;
-
-          if (bodyW > 0) {
-            // 右端を丸めるのは「延長が無く、終了日がこのセルにある」時だけ
-            const roundR = isEndCell && !hasExt;
-            const radius = (isStartCell && roundR) ? '9px'
-                         : isStartCell ? '9px 0 0 9px'
-                         : roundR      ? '0 9px 9px 0' : '0';
-
-            if (spot) {
-              // スポット：濃い色で満タン塗り＋破線枠。常駐との違いは破線で残す。
-              // 月をまたぐ場合は連続バーとして角丸を出し分け、単月内で細い場合だけ最小幅。
-              const singleCell = isStartCell && isEndCell;
-              const sRad = spotRadius(isStartCell, isEndCell);
-              const seg  = singleCell ? widen(bodyL, bodyR) : { left: bodyL, width: bodyW };
-              html += `<div class="bar-spot"
-                style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:rgba(255,255,255,.9);background:${color};${sRad}${!isStartCell ? 'border-left:none;' : ''}${!isEndCell ? 'border-right:none;' : ''}"
-                onclick="openPop(event,${row.id})"></div>`;
-            } else if (plan) {
-              // 予定：破線枠のみ（未確定）
-              html += `<div class="bar-plan"
-                style="left:${bodyL*100}%;width:${bodyW*100}%;border-color:${color};border-radius:${radius}"
-                onclick="openPop(event,${row.id})"></div>`;
-            } else {
-              // 常駐：工期ぶんを満タンに塗る（進捗は進捗列で表示）
-              html += `<div class="bar-track"
-                style="left:${bodyL*100}%;width:${bodyW*100}%;background:${color};border-radius:${radius}"
-                onclick="openPop(event,${row.id})"></div>`;
+          // ---- 各セグメントの本体 ----
+          segs.forEach((s, si) => {
+            // 第1期間(si=0)は、延長があるとき右端を丸めない
+            const roundRightAllowed = !(si === 0 && hasExt);
+            const b = bodyHtml(s.start, s.end, m, mNext, roundRightAllowed);
+            if (b.html) {
+              html += b.html;
+              if (!firstBody) firstBody = b;
             }
-          }
+          });
 
-          // ---- 延長セグメント（終了〜延長日）。ハッチング＋実線枠 ----
+          // ---- 延長セグメント（第1期間の終了〜延長日）。ハッチング＋実線枠 ----
           if (hasExt) {
             const extL = dayFrac(row.end, m);
             const extR = dayFrac(row.ext, m);
             const extW = extR - extL;
             const extEndCell = rex >= m && rex < mNext;
-
             if (extW > 0) {
               const radius = extEndCell ? '0 9px 9px 0' : '0';
               html += `<div class="bar-ext"
@@ -1340,10 +1409,10 @@ function renderGantt(monthsOverride, forPrint) {
             }
           }
 
-          // ---- 中断期間の点線（第1期間の終わり 〜 再開日） ----
-          if (p2) {
-            const gapL = dayFrac(seg1EndStr, m);
-            const gapR = dayFrac(row.start2, m);
+          // ---- 中断区間の点線 ----
+          gaps.forEach(g => {
+            const gapL = dayFrac(g.start, m);
+            const gapR = dayFrac(g.end,   m);
             const gapW = gapR - gapL;
             if (gapW > 0) {
               html += `<div class="gap-line" style="left:${gapL*100}%;width:${gapW*100}%"></div>`;
@@ -1351,54 +1420,25 @@ function renderGantt(monthsOverride, forPrint) {
                 html += `<div class="gap-label" style="left:${(gapL+gapW/2)*100}%;transform:translateX(-50%)">中断</div>`;
               }
             }
-          }
+          });
 
-          // ---- 第2期間の本体（再開日〜終了日） ----
-          if (p2) {
-            const b2L = dayFrac(row.start2, m);
-            const b2R = dayFrac(row.end2,   m);
-            const b2W = b2R - b2L;
-            const is2Start = rs2 >= m && rs2 < mNext;
-            const is2End   = re2 >= m && re2 < mNext;
-
-            if (b2W > 0) {
-              const radius = (is2Start && is2End) ? '9px'
-                           : is2Start ? '9px 0 0 9px'
-                           : is2End   ? '0 9px 9px 0' : '0';
-              if (spot) {
-                const singleCell = is2Start && is2End;
-                const sRad = spotRadius(is2Start, is2End);
-                const seg  = singleCell ? widen(b2L, b2R) : { left: b2L, width: b2W };
-                html += `<div class="bar-spot"
-                  style="left:${seg.left*100}%;width:${seg.width*100}%;border-color:rgba(255,255,255,.9);background:${color};${sRad}${!is2Start ? 'border-left:none;' : ''}${!is2End ? 'border-right:none;' : ''}"
-                  onclick="openPop(event,${row.id})"></div>`;
-              } else if (plan) {
-                html += `<div class="bar-plan"
-                  style="left:${b2L*100}%;width:${b2W*100}%;border-color:${color};border-radius:${radius}"
-                  onclick="openPop(event,${row.id})"></div>`;
-              } else {
-                // 常駐：工期ぶんを満タンに塗る
-                html += `<div class="bar-track"
-                  style="left:${b2L*100}%;width:${b2W*100}%;background:${color};border-radius:${radius}"
-                  onclick="openPop(event,${row.id})"></div>`;
-              }
-            }
-          }
-
-          // ---- 終了日ラベルを最終終了日に1回だけ ----
-          const finalEndCell = finalEnd >= m && finalEnd < mNext;
-          if (finalEndCell) {
+          // ---- 最終終了日ラベル（濃く1回） ----
+          if (finalEnd >= m && finalEnd < mNext) {
             const endF = dayFrac(finalEndStr, m);
-            html += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${finalEnd.getMonth()+1}/${finalEnd.getDate()}${(hasExt && !p2) ? '(延)' : ''}</div>`;
+            html += `<div class="bar-end-date" style="left:${endF*100}%;color:${color}">${finalEnd.getMonth()+1}/${finalEnd.getDate()}${(hasExt && nPeriods === 0) ? '(延)' : ''}</div>`;
           }
-          // 第2期間がある場合は、第1期間の終わりにも日付を薄く出す
-          if (p2 && seg1End >= m && seg1End < mNext) {
-            const f = dayFrac(seg1EndStr, m);
-            html += `<div class="bar-end-date" style="left:${f*100}%;color:${color};opacity:.7">${seg1End.getMonth()+1}/${seg1End.getDate()}</div>`;
-          }
+          // ---- 途中の区間終了日（薄く） ----
+          fadedEnds.forEach(dStr => {
+            const d = new Date(dStr);
+            if (d >= m && d < mNext) {
+              const f = dayFrac(dStr, m);
+              html += `<div class="bar-end-date" style="left:${f*100}%;color:${color};opacity:.7">${d.getMonth()+1}/${d.getDate()}</div>`;
+            }
+          });
 
-          if (willComment && bodyW > 0) {
-            html += `<div class="bar-comment" style="left:${isStartCell ? bodyL*100 : 0}%">💬 ${escapeHtml(row.comment)}</div>`;
+          // ---- コメント（最初に見えた本体の左端に1回） ----
+          if (willComment && firstBody) {
+            html += `<div class="bar-comment" style="left:${firstBody.isStartCell ? firstBody.bodyL*100 : 0}%">💬 ${escapeHtml(row.comment)}</div>`;
             commentDone = true;
           }
 
@@ -1455,10 +1495,8 @@ function openPop(e, id) {
   document.getElementById('f-start').value  = r.start;
   document.getElementById('f-end').value    = r.end;
   document.getElementById('f-ext').value    = r.ext || '';
-  document.getElementById('f-start2').value = r.start2 || '';
-  document.getElementById('f-end2').value   = r.end2 || '';
 
-  setP2Open(hasP2(r));   // 第2期間が入っていれば開いた状態で表示
+  renderPeriodList('', r.periods || []);   // 追加期間の入力欄を描画
 
   // 管理者は「工事編集」から、監督は「進捗・コメント」から開く
   document.getElementById('tab-term').textContent = isAdmin ? '工事編集' : '工期変更';
@@ -1514,20 +1552,35 @@ function closePop() {
   editId = null;
 }
 
-// 第2期間セクションの開閉
-function setP2Open(open) {
-  document.getElementById('p2-body').classList.toggle('open', open);
-  document.getElementById('p2-toggle').textContent = open ? '− 削除' : '＋ 追加';
+// 追加期間リストの描画。prefix='' はパネル、'a' は追加モーダル。
+function periodListEl(prefix) {
+  return document.getElementById(prefix === 'a' ? 'a-period-list' : 'period-list');
 }
-
-function toggleP2() {
-  const body = document.getElementById('p2-body');
-  const willOpen = !body.classList.contains('open');
-  if (!willOpen) {   // 閉じる＝第2期間を消す
-    document.getElementById('f-start2').value = '';
-    document.getElementById('f-end2').value   = '';
-  }
-  setP2Open(willOpen);
+function renderPeriodList(prefix, periods) {
+  const el = periodListEl(prefix);
+  el.innerHTML = '';
+  (periods || []).forEach(p => addPeriodRow(prefix, p.start, p.end));
+}
+function addPeriodRow(prefix, start = '', end = '') {
+  // onclick から呼ぶとき prefix にイベントが入ることがあるので正規化
+  if (prefix && typeof prefix !== 'string') prefix = '';
+  const el = periodListEl(prefix);
+  const row = document.createElement('div');
+  row.className = 'period-row';
+  row.innerHTML =
+    `<div class="f-row"><label>再開日</label><input type="date" class="pf-start" value="${start}"></div>
+     <div class="f-row"><label>終了日</label><input type="date" class="pf-end" value="${end}"></div>
+     <button type="button" class="period-del" title="この区間を削除">×</button>`;
+  row.querySelector('.period-del').onclick = () => row.remove();
+  el.appendChild(row);
+}
+// 入力欄から periods 配列を読み取る
+function collectPeriods(prefix) {
+  const el = periodListEl(prefix);
+  return Array.from(el.querySelectorAll('.period-row')).map(row => ({
+    start: row.querySelector('.pf-start').value,
+    end:   row.querySelector('.pf-end').value,
+  }));
 }
 
 function syncVal(v) {
@@ -1551,8 +1604,8 @@ async function saveProgPop() {
   const prog    = parseInt(document.getElementById('pop-range').value);
   const comment = document.getElementById('pop-comment').value.trim();
 
-  const key     = r.name + '__' + r.start + '__' + r.end;
-  const targets = kojiData.filter(x => x.name + '__' + x.start + '__' + x.end === key);
+  // 進捗＝工事の出来高。工事単位なので「同じ工事名」で束ねて同期する。
+  const targets = kojiData.filter(x => x.name === r.name);
 
   showLoading(true);
   try {
@@ -1579,13 +1632,12 @@ async function saveTermPop() {
   const start  = document.getElementById('f-start').value;
   const end    = document.getElementById('f-end').value;
   const ext    = document.getElementById('f-ext').value;
-  const start2 = document.getElementById('f-start2').value;
-  const end2   = document.getElementById('f-end2').value;
+  const periods = collectPeriods('');
 
-  const err = validateTerm(start, end, ext, start2, end2);
+  const err = validateTerm(start, end, ext, periods);
   if (err) { alert(err); return; }
 
-  const entry = { ...existing, start, end, ext, start2, end2 };
+  const entry = { ...existing, start, end, ext, periods };
   if (isAdmin) {
     entry.person = document.getElementById('f-person').value;
     entry.name   = document.getElementById('f-name').value;
@@ -1608,19 +1660,21 @@ async function saveTermPop() {
   }
 }
 
-// 工期の妥当性チェック。問題なければ null を返す。
-function validateTerm(start, end, ext, start2, end2) {
+// 工期の妥当性チェック。問題なければ null を返す。periods は [{start,end},...]。
+function validateTerm(start, end, ext, periods) {
   if (!start || !end)   return '開始日・終了日は必須です';
   if (start > end)      return '開始日は終了日より前にしてください';
   if (ext && ext < end) return '延長日は終了日より後にしてください';
 
-  if (start2 || end2) {
-    if (!start2 || !end2) return '第2期間は再開日と終了日の両方が必要です';
-    if (start2 > end2)    return '第2期間の再開日は終了日より前にしてください';
-    const prevEnd = (ext && ext > end) ? ext : end;
-    if (start2 <= prevEnd) {
-      return '第2期間の再開日は、第1期間の終了日（延長があれば延長日）より後にしてください';
-    }
+  // 追加期間は、前の区間の終了日より後で、各区間内も整合していること
+  let prevEnd = (ext && ext > end) ? ext : end;
+  const ps = periods || [];
+  for (let i = 0; i < ps.length; i++) {
+    const p = ps[i];
+    if (!p.start || !p.end) return `${i + 2}期目は再開日と終了日の両方が必要です`;
+    if (p.start > p.end)    return `${i + 2}期目の再開日は終了日より前にしてください`;
+    if (p.start <= prevEnd) return `${i + 2}期目の再開日は、前の区間の終了日より後にしてください`;
+    prevEnd = p.end;
   }
   return null;
 }
@@ -1668,8 +1722,7 @@ function openAddModal(person) {
   document.getElementById('a-start').value  = '';
   document.getElementById('a-end').value    = '';
   document.getElementById('a-ext').value    = '';
-  document.getElementById('a-start2').value = '';
-  document.getElementById('a-end2').value   = '';
+  renderPeriodList('a', []);   // 追加期間は空で開始
   document.getElementById('modal-add').classList.add('open');
 }
 
@@ -1687,13 +1740,12 @@ async function saveAdd() {
     start:    document.getElementById('a-start').value,
     end:      document.getElementById('a-end').value,
     ext:      document.getElementById('a-ext').value,
-    start2:   document.getElementById('a-start2').value,
-    end2:     document.getElementById('a-end2').value,
+    periods:  collectPeriods('a'),
     progress: 0,
     comment:  '',
   };
   if (!entry.person || !entry.name) { alert('担当者・工事名は必須です'); return; }
-  const err = validateTerm(entry.start, entry.end, entry.ext, entry.start2, entry.end2);
+  const err = validateTerm(entry.start, entry.end, entry.ext, entry.periods);
   if (err) { alert(err); return; }
 
   showLoading(true);
@@ -1740,7 +1792,9 @@ function renderProgressOnly() {
       const fg    = TYPE_FG[row.type] || '#444';
       const prog  = row.progress || 0;
       const extTxt = (row.ext && row.ext > row.end) ? ` → ${fmtDate(row.ext)}（延長）` : '';
-      const p2Txt  = hasP2(row) ? ` ＋ ${fmtDate(row.start2)} 〜 ${fmtDate(row.end2)}（再参加）` : '';
+      const p2Txt  = hasPeriods(row)
+        ? row.periods.map(p => ` ＋ ${fmtDate(p.start)} 〜 ${fmtDate(p.end)}（再参加）`).join('')
+        : '';
       html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:9px">
         <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:9px">
           <div style="flex:1;min-width:0">
