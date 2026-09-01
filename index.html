@@ -1698,26 +1698,32 @@ function stepProg(d) {
   syncVal(v);
 }
 
-// 進捗・コメントを保存。同一工事（工事名＋工期が同じ）を複数担当で持つ場合は同期。
+// 進捗率は工事単位で連動（同じ工事名を同期）。コメントは行ごとに独立。
 async function saveProgPop() {
   const r = kojiData.find(x => x.id === editId);
   if (!r) return;
   const prog    = parseInt(document.getElementById('pop-range').value);
   const comment = document.getElementById('pop-comment').value.trim();
 
-  // 進捗＝工事の出来高。工事単位なので「同じ工事名」で束ねて同期する。
+  // 進捗＝工事の出来高。同じ工事名の行すべてに progress を反映。
   const targets = kojiData.filter(x => x.name === r.name);
 
   showLoading(true);
   try {
-    await Promise.all(targets.map(t =>
-      gasPost({ action:'saveProgress', id: t.id, progress: prog, comment })
-    ));
-    targets.forEach(t => { t.progress = prog; t.comment = comment; });
+    // 進捗：全ターゲットに保存。コメント：開いた行(r)だけ本人のコメント、
+    // 他の行はコメントを変えない（各行の現在値を維持して送る）。
+    await Promise.all(targets.map(t => {
+      const cmt = (t.id === r.id) ? comment : (t.comment || '');
+      return gasPost({ action:'saveProgress', id: t.id, progress: prog, comment: cmt });
+    }));
+    targets.forEach(t => {
+      t.progress = prog;
+      if (t.id === r.id) t.comment = comment;   // コメントは開いた行だけ更新
+    });
     closePop();
     renderGantt();
-    const syncMsg = targets.length > 1 ? `（${targets.length}件同期）` : '';
-    showToast('進捗を保存しました' + syncMsg);
+    const syncMsg = targets.length > 1 ? `（進捗を${targets.length}件同期）` : '';
+    showToast('保存しました' + syncMsg);
   } catch(e) {
     showToast('保存エラー: ' + e.message, true);
   } finally {
