@@ -433,15 +433,25 @@ body.is-admin .admin-only-field { display: flex; }
 .p2-body { display: none; }
 .p2-body.open { display: block; }
 .p2-hint { font-size: 10px; color: var(--text-sub); line-height: 1.6; margin-bottom: 8px; }
-/* 可変の期間リスト行 */
+/* 可変の期間リスト行（縦積みカード） */
 .period-row {
-  display: flex; align-items: flex-end; gap: 6px; margin-bottom: 8px;
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px 4px;
+  margin-bottom: 8px;
+  background: var(--surface2);
 }
-.period-row .f-row { flex: 1; margin-bottom: 0; }
+.period-row .f-row { margin-bottom: 8px; }
+.period-row .p-label {
+  font-size: 10px; font-weight: 700; color: var(--text-sub);
+  letter-spacing: .05em; margin-bottom: 4px;
+}
 .period-del {
-  border: 1px solid var(--red); color: var(--red); background: transparent;
-  border-radius: 7px; width: 30px; height: 33px; cursor: pointer; font-size: 15px;
-  flex-shrink: 0; line-height: 1;
+  position: absolute; top: 7px; right: 8px;
+  border: 1px solid var(--red); color: var(--red); background: var(--surface);
+  border-radius: 6px; padding: 1px 7px; cursor: pointer; font-size: 11px;
+  line-height: 1.4;
 }
 .period-del:hover { background: var(--red-lt); }
 .pop-footer { display: flex; gap: 8px; margin-top: 13px; }
@@ -1565,14 +1575,26 @@ function addPeriodRow(prefix, start = '', end = '') {
   // onclick から呼ぶとき prefix にイベントが入ることがあるので正規化
   if (prefix && typeof prefix !== 'string') prefix = '';
   const el = periodListEl(prefix);
+  const idx = el.querySelectorAll('.period-row').length + 2;   // 第2期間から
   const row = document.createElement('div');
   row.className = 'period-row';
   row.innerHTML =
-    `<div class="f-row"><label>再開日</label><input type="date" class="pf-start" value="${start}"></div>
-     <div class="f-row"><label>終了日</label><input type="date" class="pf-end" value="${end}"></div>
-     <button type="button" class="period-del" title="この区間を削除">×</button>`;
-  row.querySelector('.period-del').onclick = () => row.remove();
+    `<button type="button" class="period-del" title="この区間を削除">× 削除</button>
+     <div class="p-label">${idx}期目 再開日</div>
+     <div class="f-row"><input type="date" class="pf-start" value="${start}"></div>
+     <div class="p-label">${idx}期目 終了日</div>
+     <div class="f-row" style="margin-bottom:0"><input type="date" class="pf-end" value="${end}"></div>`;
+  row.querySelector('.period-del').onclick = () => { row.remove(); renumberPeriods(prefix); };
   el.appendChild(row);
+}
+// 区間を削除したあと「N期目」の番号を振り直す
+function renumberPeriods(prefix) {
+  const el = periodListEl(prefix);
+  el.querySelectorAll('.period-row').forEach((row, i) => {
+    const labels = row.querySelectorAll('.p-label');
+    if (labels[0]) labels[0].textContent = `${i + 2}期目 再開日`;
+    if (labels[1]) labels[1].textContent = `${i + 2}期目 終了日`;
+  });
 }
 // 入力欄から periods 配列を読み取る
 function collectPeriods(prefix) {
