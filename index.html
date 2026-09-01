@@ -925,6 +925,16 @@ function fmtDate(s) {
   return str.slice(0, 10);
 }
 
+// yyyy-MM-dd の翌日を返す（中断の「終了日の翌日から再開」用）
+function addDay(dateStr) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  const y  = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const da = String(d.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${da}`;
+}
+
 function normalizeKoji(list) {
   return (list || []).map(r => {
     // breaks（中断期間＝工期の内側で参加しない期間）を配列に正規化。
@@ -993,17 +1003,19 @@ function segmentsOf(r) {
   const segs = [];
   let cur = r.start;
   bks.forEach(b => {
+    // 中断開始日から穴、終了日の翌日から再開（例: 9/1〜9/30中断 → 8/31まで参加、10/1再開）
     if (b.start > cur) segs.push({ start: cur, end: b.start });
-    if (b.end > cur) cur = b.end;
+    const resume = addDay(b.end);
+    if (resume > cur) cur = resume;
   });
   if (r.end > cur) segs.push({ start: cur, end: r.end });
   if (!segs.length) segs.push({ start: r.start, end: r.end });
   return segs;
 }
 
-// 中断（参加なし）の区間配列＝ breaks そのもの
+// 中断（参加なし）の区間配列。終了日の翌日までを穴として描く。
 function gapsOf(r) {
-  return (r.breaks || []).map(b => ({ start: b.start, end: b.end }));
+  return (r.breaks || []).map(b => ({ start: b.start, end: addDay(b.end) }));
 }
 
 function escapeHtml(s) {
