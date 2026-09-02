@@ -752,15 +752,11 @@ body.is-admin .btn-del { display: block; }
 
 <div id="page-settings" class="page">
   <div class="settings-section">
-    <h3>管理者パスワード変更</h3>
-    <div class="form-row">
-      <label>新しいパスワード</label>
-      <input type="password" id="new-pw" placeholder="新しいパスワード" style="max-width:220px">
-    </div>
-    <button class="btn btn-primary" onclick="changePw()">変更</button>
-    <p style="font-size:11px;color:var(--text-sub);margin-top:8px">
-      ※ ここで変えるのは、この端末で管理者タブを開くためのパスワードです（localStorageに保存）。<br>
-      ※ 書き込み権限そのものはGAS側の ADMIN_PASSWORD で管理されています。両方を揃えてください。
+    <h3>管理者パスワード</h3>
+    <p style="font-size:12px;color:var(--text-sub);line-height:1.8">
+      管理者パスワードは全端末共通の固定値です。<br>
+      変更する場合は、HTMLファイル冒頭の <code>ADMIN_PW</code> と、GAS側の <code>ADMIN_PASSWORD</code> を<br>
+      <b>同じ値</b>に書き換えてください（片方だけ変えると保存できなくなります）。
     </p>
   </div>
 
@@ -913,9 +909,9 @@ const COLOR = { 元請:'#c93535', 民間:'#1c8050', 予定:'#2055a0' };
 const LIGHT = { 元請:'#f7e3e3', 民間:'#e2f2ea', 予定:'#e3ebf7' };
 const TYPE_BG = { 元請:'#fbeaea', 民間:'#e8f5ee', 予定:'#e8eef8' };
 const TYPE_FG = { 元請:'#8a2020', 民間:'#10522f', 予定:'#133070' };
-const DEFAULT_PW = 'admin1234';
-
-let ADMIN_PW   = localStorage.getItem('adminPw') || DEFAULT_PW;
+// 管理者パスワード（GAS側の ADMIN_PASSWORD と必ず同じ値にすること）。
+// 全端末で共通の固定値。端末ごとの変更・localStorage保存は廃止。
+const ADMIN_PW = '0000';
 let isAdmin    = false;
 let pendingTab = null;
 let editId     = null;   // パネルで編集中の工事ID
@@ -2013,15 +2009,6 @@ async function removeKoji(name) {
   } catch(e) {
     showToast('エラー: ' + e.message, true);
   } finally { showLoading(false); }
-}
-
-function changePw() {
-  const pw = document.getElementById('new-pw').value.trim();
-  if (!pw) { alert('パスワードを入力してください'); return; }
-  ADMIN_PW = pw;
-  localStorage.setItem('adminPw', pw);
-  document.getElementById('new-pw').value = '';
-  showToast('パスワードを変更しました');
 }
 
 /* ---------- 印刷 ---------- */
